@@ -22,7 +22,9 @@
 
 <div align="center">
 
-[![App en Producción](https://img.shields.io/badge/🌐_App_en_Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white&labelColor=1a1a1a)](https://surtidor-tawny.vercel.app/)
+[![Prototipo](https://img.shields.io/badge/🎨_Prototipo_v0-7C3AED?style=for-the-badge&logo=vercel&logoColor=white&labelColor=6D28D9)](https://surtidor-tawny.vercel.app/)
+&nbsp;&nbsp;
+[![App en Producción](https://img.shields.io/badge/🌐_App_en_Producción-000000?style=for-the-badge&logo=vercel&logoColor=white&labelColor=1a1a1a)](https://joaquin-felipez.vercel.app/login)
 
 </div>
 
@@ -274,13 +276,16 @@ La aplicación está preparada para desplegarse en:
 - **Frontend:** [Vercel](https://vercel.com) (plataforma recomendada para Next.js)
 - **Backend/Database:** [Supabase](https://supabase.com) (hosteado)
 
-> 🔗 **Link del proyecto deployeado:** [https://surtidor-tawny.vercel.app/](https://surtidor-tawny.vercel.app/)
+> 🔗 **Prototipo (v0.dev):** [https://surtidor-tawny.vercel.app/](https://surtidor-tawny.vercel.app/)
+>
+> 🔗 **App en Producción:** [https://joaquin-felipez.vercel.app/login](https://joaquin-felipez.vercel.app/login)
 
 ### 🔗 Enlaces Rápidos
 
 | Recurso | Link |
 |---------|------|
-| 🌐 App en Vercel | [surtidor-tawny.vercel.app](https://surtidor-tawny.vercel.app/) |
+| 🎨 Prototipo (v0) | [surtidor-tawny.vercel.app](https://surtidor-tawny.vercel.app/) |
+| 🌐 App en Producción | [joaquin-felipez.vercel.app](https://joaquin-felipez.vercel.app/login) |
 
 ---
 

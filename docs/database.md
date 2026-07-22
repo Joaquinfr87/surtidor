@@ -6,56 +6,185 @@
 
 ## 📋 Índice
 
-1. [Diagrama Entidad-Relación](#diagrama-entidad-relación)
+1. [Diagrama Entidad-Relacion](#diagrama-entidad-relacion)
 2. [Tipos Personalizados](#tipos-personalizados)
-3. [Tablas](#tablas)
+3. [Autenticacion y Roles](#autenticacion-y-roles)
+   - [Profiles](#profiles)
+   - [Roles y Permisos](#roles-y-permisos)
+   - [Funcion helper de roles](#funcion-helper-de-roles)
+4. [Tablas del Sistema](#tablas-del-sistema)
    - [Surtidores](#surtidores)
+   - [Precios de Combustible](#precios-de-combustible)
    - [Ventas](#ventas)
+   - [Metodos de Pago](#metodos-de-pago)
    - [Alertas](#alertas)
-4. [Triggers y Funciones](#triggers-y-funciones)
-5. [Políticas de Seguridad (RLS)](#políticas-de-seguridad-rls)
-6. [Índices](#índices)
-7. [Relación con Sistemas Digitales](#relación-con-sistemas-digitales)
-8. [Script SQL Completo](#script-sql-completo)
+   - [Proveedores](#proveedores)
+   - [Abastecimientos](#abastecimientos)
+   - [Turnos](#turnos)
+5. [Triggers y Funciones](#triggers-y-funciones)
+6. [Politicas de Seguridad (RLS)](#politicas-de-seguridad-rls)
+7. [Vistas para Reportes](#vistas-para-reportes)
+8. [Indices](#indices)
+9. [Script SQL Completo](#script-sql-completo)
 
 ---
 
-## <a name="diagrama-entidad-relación"></a>Diagrama Entidad-Relación
+## <a name="diagrama-entidad-relacion"></a>Diagrama Entidad-Relacion
 
 ```mermaid
 erDiagram
-    SURTIDORES ||--o{ VENTAS : "tiene"
-    SURTIDORES ||--o{ ALERTAS : "genera"
+    profiles ||--o{ user_roles : tiene
+    roles ||--o{ user_roles : asigna
+    profiles ||--o{ turnos : "registra"
+    profiles ||--o{ ventas : "registra"
 
-    SURTIDORES {
-        int id PK "Serial"
-        int numero UK "Número identificador"
-        enum combustible "Tipo de combustible"
-        numeric capacidad "Capacidad total en litros"
-        varchar nivel "Nivel binario (00, 01, 10, 11)"
-        timestamp creado_en "Fecha de creación"
+    surtidores ||--o{ ventas : "genera"
+    surtidores ||--o{ alertas : "produce"
+    surtidores ||--o{ abastecimientos : "recibe"
+
+    tipos_combustible ||--o{ surtidores : "contiene"
+    tipos_combustible ||--o{ precios_combustible : "tiene"
+    tipos_combustible ||--o{ ventas : "referencia"
+    tipos_combustible ||--o{ abastecimientos : "referencia"
+
+    proveedores ||--o{ abastecimientos : "suministra"
+
+    ventas ||--o{ pagos : "recibe"
+    metodos_pago ||--o{ pagos : "utiliza"
+
+    profiles {
+        uuid id PK "Referencia a auth.users"
+        text email "Email del usuario"
+        text nombre_completo "Nombre completo"
+        text telefono "Teléfono de contacto"
+        boolean activo "Usuario activo/inactivo"
+        timestamp creado_en "Fecha de registro"
         timestamp actualizado_en "Última actualización"
     }
 
-    VENTAS {
+    roles {
+        text nombre PK "admin, supervisor, operador, auditor"
+        text descripcion "Descripción del rol"
+        jsonb permisos "Lista de permisos asociados"
+    }
+
+    user_roles {
+        uuid usuario_id PK,FK "Referencia a profiles"
+        text rol PK,FK "Referencia a roles"
+        timestamp asignado_en "Fecha de asignación"
+    }
+
+    tipos_combustible {
+        text id PK "gasolina_regular, gasolina_premium, diesel"
+        text nombre "Nombre para mostrar"
+        text descripcion "Descripción del combustible"
+        text unidad "litro, galon"
+        boolean activo "Disponible para venta"
+    }
+
+    surtidores {
         int id PK "Serial"
-        int surtidor_id FK "Referencia a surtidor"
-        timestamp fecha "Fecha de venta"
-        enum combustible "Tipo de combustible"
-        numeric litros "Cantidad de litros"
-        numeric precio_unitario "Precio por litro"
-        numeric total "Total calculado"
+        int numero UK "Número de surtidor"
+        text tipo_combustible_id FK "Tipo de combustible"
+        numeric capacidad "Capacidad total en litros"
+        varchar nivel "vacio, bajo, medio, lleno"
+        numeric nivel_litros "Nivel actual en litros"
+        boolean activo "Surtidor operativo"
+        uuid creado_por FK "Usuario que registró"
+        timestamp creado_en "Fecha de registro"
+        timestamp actualizado_en "Última actualización"
+    }
+
+    precios_combustible {
+        int id PK "Serial"
+        text tipo_combustible_id FK "Tipo de combustible"
+        numeric precio_por_litro "Precio en Bs"
+        date fecha_inicio "Vigencia desde"
+        date fecha_fin "Vigencia hasta (nullable)"
+        uuid actualizado_por FK "Usuario que actualizó"
         timestamp creado_en "Fecha de registro"
     }
 
-    ALERTAS {
+    ventas {
+        uuid id PK "UUID v4"
+        int surtidor_id FK "Surtidor que despachó"
+        text tipo_combustible_id FK "Combustible vendido"
+        numeric litros "Litros despachados"
+        numeric precio_unitario "Precio por litro aplicado"
+        numeric subtotal "Subtotal antes de impuestos"
+        numeric impuesto "Impuesto aplicado (ej: 13% IVA)"
+        numeric total "Total final"
+        uuid registrado_por FK "Operador que registró"
+        uuid turno_id FK "Turno en que se registró"
+        text notas "Notas u observaciones"
+        boolean anulada "Venta anulada"
+        timestamp fecha "Fecha de la venta"
+        timestamp creado_en "Fecha de registro"
+    }
+
+    metodos_pago {
+        text id PK "efectivo, tarjeta, transferencia, credito"
+        text nombre "Nombre para mostrar"
+        boolean activo "Disponible para uso"
+    }
+
+    pagos {
+        uuid id PK "UUID v4"
+        uuid venta_id FK "Venta asociada"
+        text metodo_pago_id FK "Método de pago"
+        numeric monto "Monto pagado"
+        text referencia "Nº de referencia (tarjeta/transferencia)"
+        timestamp creado_en "Fecha de pago"
+    }
+
+    alertas {
         int id PK "Serial"
-        int surtidor_id FK "Referencia a surtidor"
-        enum tipo "bajo o critico"
+        int surtidor_id FK "Surtidor afectado"
+        text tipo "tipo: bajo, critico"
         varchar nivel "Nivel que generó la alerta"
         boolean activa "Alerta activa o resuelta"
+        uuid resuelto_por FK "Usuario que resolvió"
         timestamp creado_en "Fecha de generación"
         timestamp resuelta_en "Fecha de resolución"
+    }
+
+    proveedores {
+        int id PK "Serial"
+        text nombre "Nombre del proveedor"
+        text nit "NIT del proveedor"
+        text contacto "Persona de contacto"
+        text telefono "Teléfono de contacto"
+        text email "Email de contacto"
+        text direccion "Dirección"
+        boolean activo "Proveedor activo"
+        timestamp creado_en "Fecha de registro"
+    }
+
+    abastecimientos {
+        int id PK "Serial"
+        int surtidor_id FK "Surtidor abastecido"
+        int proveedor_id FK "Proveedor"
+        text tipo_combustible_id FK "Combustible"
+        numeric litros "Litros recibidos"
+        numeric precio_por_litro "Precio de compra por litro"
+        numeric costo_total "Costo total del abastecimiento"
+        text factura "Nº de factura"
+        uuid registrado_por FK "Usuario que registró"
+        timestamp fecha "Fecha del abastecimiento"
+        timestamp creado_en "Fecha de registro"
+    }
+
+    turnos {
+        uuid id PK "UUID v4"
+        uuid operador_id FK "Operador del turno"
+        uuid supervisor_id FK "Supervisor a cargo"
+        timestamp inicio "Inicio del turno"
+        timestamp fin "Fin del turno (nullable)"
+        numeric ventas_total "Total de ventas del turno"
+        numeric litros_total "Total de litros despachados"
+        boolean cerrado "Turno cerrado"
+        text notas "Notas del turno"
+        timestamp creado_en "Fecha de registro"
     }
 ```
 
@@ -63,117 +192,304 @@ erDiagram
 
 ## <a name="tipos-personalizados"></a>Tipos Personalizados
 
-### `tipo_combustible`
-
-Enumera los tipos de combustible disponibles en la estación.
-
-```sql
-CREATE TYPE tipo_combustible AS ENUM (
-    'gasolina_regular',   -- Gasolina Regular (85 octanos)
-    'gasolina_premium',   -- Gasolina Premium (95 octanos)
-    'diesel'              -- Diésel
-);
-```
-
-**Relación con Sistemas Digitales:** Los tipos de combustible se codifican mediante un **decodificador**:
-
-| Código | Combustible |
-|--------|-------------|
-| `00` | Gasolina Regular |
-| `01` | Gasolina Premium |
-| `10` | Diésel |
-
 ### `tipo_alerta`
-
-Define los niveles de alerta del sistema.
 
 ```sql
 CREATE TYPE tipo_alerta AS ENUM (
-    'bajo',    -- Nivel bajo (LED amarillo) — nivel ≤ 25%
-    'critico'  -- Nivel crítico (LED rojo) — nivel ≤ 10%
+    'bajo',    -- Nivel de combustible bajo (≤ 25%)
+    'critico'  -- Nivel crítico (≤ 10% o vacío)
+);
+```
+
+### `nivel_combustible`
+
+```sql
+CREATE TYPE nivel_combustible AS ENUM (
+    'vacio',  -- 0%
+    'bajo',   -- 1% – 25%
+    'medio',  -- 26% – 50%
+    'lleno'   -- 51% – 100%
 );
 ```
 
 ---
 
-## <a name="tablas"></a>Tablas
+## <a name="autenticacion-y-roles"></a>Autenticacion y Roles
 
-### <a name="surtidores"></a>⛽ Surtidores
+El sistema utiliza **Supabase Auth** para la autenticación. Los usuarios se registran mediante email/contraseña, y los perfiles extendidos se almacenan en la tabla `profiles`.
 
-Registro de cada surtidor de la estación con su nivel actual.
+### <a name="profiles"></a>👤 Profiles
+
+Vinculado automáticamente con `auth.users` de Supabase mediante un trigger.
 
 ```sql
-CREATE TABLE surtidores (
-    id              SERIAL PRIMARY KEY,
-    numero          INTEGER NOT NULL UNIQUE,
-    combustible     tipo_combustible NOT NULL,
-    capacidad       NUMERIC(10, 2) NOT NULL CHECK (capacidad > 0),
-    nivel           VARCHAR(2) NOT NULL DEFAULT '11'
-                    CHECK (nivel IN ('00', '01', '10', '11')),
+CREATE TABLE profiles (
+    id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email           TEXT NOT NULL,
+    nombre_completo TEXT NOT NULL,
+    telefono        TEXT,
+    activo          BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-COMMENT ON TABLE surtidores IS 'Registro de surtidores de gasolina con nivel de combustible representado en binario';
-COMMENT ON COLUMN surtidores.nivel IS 'Nivel de combustible en binario: 00=vacío, 01=25%, 10=50%, 11=100%';
+-- Trigger: crear profile automáticamente al registrarse
+CREATE OR REPLACE FUNCTION crear_profile_al_registrarse()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, nombre_completo)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'nombre_completo', 'Usuario')
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trigger_crear_profile
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION crear_profile_al_registrarse();
 ```
 
 #### Campos
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `id` | `SERIAL PRIMARY KEY` | Identificador único del surtidor |
-| `numero` | `INTEGER NOT NULL UNIQUE` | Número identificador del surtidor (visible en la estación) |
-| `combustible` | `tipo_combustible NOT NULL` | Tipo de combustible que despacha |
-| `capacidad` | `NUMERIC(10,2) NOT NULL` | Capacidad total del tanque en litros |
-| `nivel` | `VARCHAR(2) NOT NULL DEFAULT '11'` | Nivel actual en representación binaria de 2 bits |
-| `creado_en` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | Fecha y hora de registro |
-| `actualizado_en` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | Fecha y hora de última actualización |
+| `id` | `UUID PK` | Referencia a `auth.users.id` |
+| `email` | `TEXT NOT NULL` | Email del usuario |
+| `nombre_completo` | `TEXT NOT NULL` | Nombre completo |
+| `telefono` | `TEXT` | Teléfono de contacto |
+| `activo` | `BOOLEAN DEFAULT TRUE` | Si el usuario está activo |
+| `creado_en` | `TIMESTAMPTZ` | Fecha de registro |
+| `actualizado_en` | `TIMESTAMPTZ` | Última actualización |
 
-### <a name="ventas"></a>💰 Ventas
+### <a name="roles-y-permisos"></a>🔐 Roles y Permisos
 
-Registro de transacciones de venta de combustible.
+Sistema de roles con permisos granulares mediante una tabla de roles y una tabla de asignación.
+
+```sql
+CREATE TABLE roles (
+    nombre      TEXT PRIMARY KEY,
+    descripcion TEXT NOT NULL,
+    permisos    JSONB NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE user_roles (
+    usuario_id  UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    rol         TEXT NOT NULL REFERENCES roles(nombre) ON DELETE CASCADE,
+    asignado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (usuario_id, rol)
+);
+```
+
+#### Roles Definidos
+
+| Rol | Descripción | Permisos |
+|-----|-------------|----------|
+| `admin` | Acceso completo al sistema | `surtidores:*`, `ventas:*`, `alertas:*`, `reportes:*`, `usuarios:*`, `config:*` |
+| `supervisor` | Gestión operativa y reportes | `surtidores:read`, `ventas:read`, `alertas:*`, `reportes:*`, `turnos:*` |
+| `operador` | Registro de ventas y operación diaria | `surtidores:read`, `ventas:create`, `alertas:read`, `turnos:read` |
+| `auditor` | Consulta de reportes e historial | `ventas:read`, `reportes:*`, `alertas:read`, `surtidores:read` |
+
+```sql
+-- Insertar roles base
+INSERT INTO roles (nombre, descripcion, permisos) VALUES
+    ('admin',      'Acceso completo al sistema',                                '["surtidores:*","ventas:*","alertas:*","reportes:*","usuarios:*","config:*"]'),
+    ('supervisor', 'Gestión operativa, alertas y reportes',                     '["surtidores:read","ventas:read","alertas:*","reportes:*","turnos:*"]'),
+    ('operador',   'Registro de ventas y operación de surtidores',              '["surtidores:read","ventas:create","ventas:read","alertas:read","turnos:read"]'),
+    ('auditor',    'Consulta de reportes e historial (solo lectura)',           '["ventas:read","reportes:*","alertas:read","surtidores:read"]');
+```
+
+### <a name="funcion-helper-de-roles"></a>🎯 Funcion Helper para Verificar Roles
+
+```sql
+CREATE OR REPLACE FUNCTION verificar_rol(rol_requerido TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE usuario_id = auth.uid()
+        AND rol = rol_requerido
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION verificar_permiso(permiso_requerido TEXT)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_permisos JSONB;
+    v_rol TEXT;
+BEGIN
+    FOR v_rol IN
+        SELECT ur.rol FROM user_roles ur WHERE ur.usuario_id = auth.uid()
+    LOOP
+        SELECT r.permisos INTO v_permisos FROM roles r WHERE r.nombre = v_rol;
+        
+        IF v_permisos ?: permiso_requerido OR v_permisos ?: split_part(permiso_requerido, ':', 1) || ':*' THEN
+            RETURN TRUE;
+        END IF;
+    END LOOP;
+    RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+---
+
+## <a name="tablas-del-sistema"></a>Tablas del Sistema
+
+### <a name="tipos_combustible"></a>🛢️ Tipos de Combustible
+
+Catálogo de combustibles disponible en la estación. Se usa como tabla en lugar de ENUM para permitir administración dinámica.
+
+```sql
+CREATE TABLE tipos_combustible (
+    id          TEXT PRIMARY KEY,
+    nombre      TEXT NOT NULL UNIQUE,
+    descripcion TEXT,
+    unidad      TEXT NOT NULL DEFAULT 'litro' CHECK (unidad IN ('litro', 'galon')),
+    activo      BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO tipos_combustible (id, nombre, descripcion) VALUES
+    ('gasolina_regular', 'Gasolina Regular', 'Gasolina de 85 octanos'),
+    ('gasolina_premium', 'Gasolina Premium', 'Gasolina de 95 octanos'),
+    ('diesel',           'Diésel',           'Diésel premium');
+```
+
+### <a name="surtidores"></a>⛽ Surtidores
+
+Registro de cada surtidor con control de nivel en tiempo real.
+
+```sql
+CREATE TABLE surtidores (
+    id                  SERIAL PRIMARY KEY,
+    numero              INTEGER NOT NULL UNIQUE,
+    tipo_combustible_id TEXT NOT NULL REFERENCES tipos_combustible(id),
+    capacidad           NUMERIC(10, 2) NOT NULL CHECK (capacidad > 0),
+    nivel               nivel_combustible NOT NULL DEFAULT 'lleno',
+    nivel_litros        NUMERIC(10, 2) NOT NULL CHECK (nivel_litros >= 0),
+    activo              BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_por          UUID REFERENCES profiles(id),
+    creado_en           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actualizado_en      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+#### Campos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | `SERIAL PK` | Identificador único |
+| `numero` | `INTEGER UNIQUE` | Número del surtidor (visible) |
+| `tipo_combustible_id` | `TEXT FK` | Tipo de combustible que despacha |
+| `capacidad` | `NUMERIC` | Capacidad total en litros |
+| `nivel` | `ENUM` | Estado del nivel (`vacio`, `bajo`, `medio`, `lleno`) |
+| `nivel_litros` | `NUMERIC` | Nivel actual en litros exactos |
+| `activo` | `BOOLEAN` | Si el surtidor está operativo |
+| `creado_por` | `UUID FK` | Usuario que registró el surtidor |
+| `creado_en` | `TIMESTAMPTZ` | Fecha de registro |
+| `actualizado_en` | `TIMESTAMPTZ` | Última actualización |
+
+### <a name="precios-de-combustible"></a>💰 Precios de Combustible
+
+Historial de precios con control de vigencia.
+
+```sql
+CREATE TABLE precios_combustible (
+    id                    SERIAL PRIMARY KEY,
+    tipo_combustible_id   TEXT NOT NULL REFERENCES tipos_combustible(id),
+    precio_por_litro      NUMERIC(10, 2) NOT NULL CHECK (precio_por_litro > 0),
+    fecha_inicio          DATE NOT NULL,
+    fecha_fin             DATE,
+    actualizado_por       UUID REFERENCES profiles(id),
+    creado_en             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### <a name="ventas"></a>🧾 Ventas
+
+Registro de transacciones de venta con soporte para múltiples métodos de pago, impuestos y trazabilidad.
 
 ```sql
 CREATE TABLE ventas (
-    id                SERIAL PRIMARY KEY,
-    surtidor_id       INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE RESTRICT,
-    fecha             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    combustible       tipo_combustible NOT NULL,
-    litros            NUMERIC(10, 2) NOT NULL CHECK (litros > 0),
-    precio_unitario   NUMERIC(10, 2) NOT NULL CHECK (precio_unitario > 0),
-    total             NUMERIC(10, 2) NOT NULL CHECK (total > 0),
-    creado_en         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    surtidor_id           INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE RESTRICT,
+    tipo_combustible_id   TEXT NOT NULL REFERENCES tipos_combustible(id),
+    litros                NUMERIC(10, 2) NOT NULL CHECK (litros > 0),
+    precio_unitario       NUMERIC(10, 2) NOT NULL CHECK (precio_unitario > 0),
+    subtotal              NUMERIC(10, 2) NOT NULL CHECK (subtotal > 0),
+    impuesto              NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (impuesto >= 0),
+    total                 NUMERIC(10, 2) NOT NULL CHECK (total > 0),
+    registrado_por        UUID NOT NULL REFERENCES profiles(id),
+    turno_id              UUID REFERENCES turnos(id),
+    notas                 TEXT,
+    anulada               BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    creado_en             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-
-COMMENT ON TABLE ventas IS 'Historial de ventas de combustible con cálculos usando aritmética binaria';
-COMMENT ON COLUMN ventas.total IS 'Total calculado: litros × precio_unitario (demostrable con aritmética binaria)';
 ```
 
 #### Campos
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `id` | `SERIAL PRIMARY KEY` | Identificador único de la venta |
-| `surtidor_id` | `INTEGER NOT NULL FK` | Referencia al surtidor que realizó la venta |
-| `fecha` | `TIMESTAMPTZ NOT NULL` | Fecha y hora de la venta |
-| `combustible` | `tipo_combustible NOT NULL` | Tipo de combustible vendido |
-| `litros` | `NUMERIC(10,2) NOT NULL` | Cantidad de litros despachados |
-| `precio_unitario` | `NUMERIC(10,2) NOT NULL` | Precio por litro en bolivianos |
-| `total` | `NUMERIC(10,2) NOT NULL` | Total de la venta (litros × precio_unitario) |
-| `creado_en` | `TIMESTAMPTZ NOT NULL` | Fecha de registro |
+| `id` | `UUID PK` | Identificador único (UUID v4) |
+| `surtidor_id` | `INTEGER FK` | Surtidor que despachó |
+| `tipo_combustible_id` | `TEXT FK` | Combustible vendido |
+| `litros` | `NUMERIC` | Litros despachados |
+| `precio_unitario` | `NUMERIC` | Precio por litro aplicado |
+| `subtotal` | `NUMERIC` | Subtotal (litros × precio) |
+| `impuesto` | `NUMERIC` | Impuesto (ej: 13% IVA → subtotal × 0.13) |
+| `total` | `NUMERIC` | Total final (subtotal + impuesto) |
+| `registrado_por` | `UUID FK` | Operador que registró la venta |
+| `turno_id` | `UUID FK` | Turno en que se registró |
+| `notas` | `TEXT` | Notas u observaciones |
+| `anulada` | `BOOLEAN` | Si la venta fue anulada |
+| `fecha` | `TIMESTAMPTZ` | Fecha de la venta |
+| `creado_en` | `TIMESTAMPTZ` | Fecha de registro |
+
+### <a name="metodos-de-pago"></a>💳 Metodos de Pago
+
+```sql
+CREATE TABLE metodos_pago (
+    id      TEXT PRIMARY KEY,
+    nombre  TEXT NOT NULL UNIQUE,
+    activo  BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO metodos_pago (id, nombre) VALUES
+    ('efectivo',       'Efectivo'),
+    ('tarjeta',        'Tarjeta de Débito/Crédito'),
+    ('transferencia',  'Transferencia Bancaria'),
+    ('credito',        'Crédito');
+```
+
+```sql
+CREATE TABLE pagos (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venta_id        UUID NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+    metodo_pago_id  TEXT NOT NULL REFERENCES metodos_pago(id),
+    monto           NUMERIC(10, 2) NOT NULL CHECK (monto > 0),
+    referencia      TEXT,
+    creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+> **Nota:** Una venta puede tener múltiples pagos (ej: parte en efectivo, parte con tarjeta). La suma de los montos de `pagos` debe ser igual al `total` de la `venta`.
 
 ### <a name="alertas"></a>🚨 Alertas
-
-Registro de alertas generadas por niveles bajos o críticos de combustible.
 
 ```sql
 CREATE TABLE alertas (
     id              SERIAL PRIMARY KEY,
     surtidor_id     INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE CASCADE,
     tipo            tipo_alerta NOT NULL,
-    nivel           VARCHAR(2) NOT NULL CHECK (nivel IN ('00', '01', '10', '11')),
+    nivel           nivel_combustible NOT NULL,
     activa          BOOLEAN NOT NULL DEFAULT TRUE,
+    resuelto_por    UUID REFERENCES profiles(id),
     creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     resuelta_en     TIMESTAMPTZ
 );
@@ -183,24 +499,97 @@ CREATE TABLE alertas (
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| `id` | `SERIAL PRIMARY KEY` | Identificador único de la alerta |
-| `surtidor_id` | `INTEGER NOT NULL FK` | Surtidor que genera la alerta |
-| `tipo` | `tipo_alerta NOT NULL` | Tipo de alerta: `bajo` (LED amarillo) o `critico` (LED rojo) |
-| `nivel` | `VARCHAR(2) NOT NULL` | Nivel binario que generó la alerta |
-| `activa` | `BOOLEAN NOT NULL DEFAULT TRUE` | Estado de la alerta |
-| `creado_en` | `TIMESTAMPTZ NOT NULL` | Fecha de generación |
-| `resuelta_en` | `TIMESTAMPTZ` | Fecha de resolución (cuando se reabastece) |
+| `id` | `SERIAL PK` | Identificador único |
+| `surtidor_id` | `INTEGER FK` | Surtidor que genera la alerta |
+| `tipo` | `ENUM` | `bajo` (LED amarillo) o `critico` (LED rojo) |
+| `nivel` | `ENUM` | Nivel que generó la alerta |
+| `activa` | `BOOLEAN` | Si la alerta está activa |
+| `resuelto_por` | `UUID FK` | Usuario que resolvió la alerta |
+| `creado_en` | `TIMESTAMPTZ` | Fecha de generación |
+| `resuelta_en` | `TIMESTAMPTZ` | Fecha de resolución |
+
+### <a name="proveedores"></a>🏭 Proveedores
+
+```sql
+CREATE TABLE proveedores (
+    id          SERIAL PRIMARY KEY,
+    nombre      TEXT NOT NULL,
+    nit         TEXT UNIQUE,
+    contacto    TEXT,
+    telefono    TEXT,
+    email       TEXT,
+    direccion   TEXT,
+    activo      BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### <a name="abastecimientos"></a>🛢️ Abastecimientos
+
+Registro de reabastecimiento de combustible a los surtidores.
+
+```sql
+CREATE TABLE abastecimientos (
+    id                    SERIAL PRIMARY KEY,
+    surtidor_id           INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE RESTRICT,
+    proveedor_id          INTEGER NOT NULL REFERENCES proveedores(id) ON DELETE RESTRICT,
+    tipo_combustible_id   TEXT NOT NULL REFERENCES tipos_combustible(id),
+    litros                NUMERIC(10, 2) NOT NULL CHECK (litros > 0),
+    precio_por_litro      NUMERIC(10, 2) NOT NULL CHECK (precio_por_litro > 0),
+    costo_total           NUMERIC(10, 2) NOT NULL CHECK (costo_total > 0),
+    factura               TEXT,
+    registrado_por        UUID NOT NULL REFERENCES profiles(id),
+    fecha                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    creado_en             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### <a name="turnos"></a>🕐 Turnos
+
+Registro de turnos de trabajo de los operadores.
+
+```sql
+CREATE TABLE turnos (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    operador_id     UUID NOT NULL REFERENCES profiles(id),
+    supervisor_id   UUID REFERENCES profiles(id),
+    inicio          TIMESTAMPTZ NOT NULL,
+    fin             TIMESTAMPTZ,
+    ventas_total    NUMERIC(10, 2) DEFAULT 0,
+    litros_total    NUMERIC(10, 2) DEFAULT 0,
+    cerrado         BOOLEAN NOT NULL DEFAULT FALSE,
+    notas           TEXT,
+    creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
 
 ---
 
 ## <a name="triggers-y-funciones"></a>Triggers y Funciones
 
-### `actualizar_actualizado_en()`
-
-Actualiza automáticamente el campo `actualizado_en` al modificar un surtidor.
+### `actualizar_profile()`
 
 ```sql
-CREATE OR REPLACE FUNCTION actualizar_actualizado_en()
+CREATE OR REPLACE FUNCTION actualizar_profile()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.actualizado_en = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_actualizar_profile
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION actualizar_profile();
+```
+
+### `actualizar_timestamp()`
+
+Trigger genérico para actualizar `actualizado_en` en cualquier tabla.
+
+```sql
+CREATE OR REPLACE FUNCTION actualizar_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.actualizado_en = NOW();
@@ -211,104 +600,36 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_actualizar_surtidor
     BEFORE UPDATE ON surtidores
     FOR EACH ROW
-    EXECUTE FUNCTION actualizar_actualizado_en();
-```
-
-### `generar_alerta_nivel()`
-
-Genera alertas automáticas cuando el nivel de un surtidor cambia a un estado crítico o bajo.
-
-> **Relación con Sistemas Digitales:** Esta función implementa la lógica de **compuertas lógicas** y **mapas de Karnaugh** para determinar el tipo de alerta.
-
-```sql
-CREATE OR REPLACE FUNCTION generar_alerta_nivel()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_nivel_bajo BOOLEAN;
-    v_nivel_critico BOOLEAN;
-BEGIN
-    -- Lógica de compuertas lógicas para determinar alertas
-    -- Basada en mapa de Karnaugh:
-    --
-    --        N1\N0 | 0 | 1
-    --        ------+---+---
-    --          0   | R | A
-    --          1   | - | -
-    --
-    -- Donde:
-    --   N1 = MSB, N0 = LSB
-    --   R = Alerta Roja (Crítica) = ¬N1 · ¬N0  → nivel '00'
-    --   A = Alerta Amarilla (Baja) = ¬N1 · N0   → nivel '01'
-    --   - = Sin alerta                           → nivel '10', '11'
-
-    v_nivel_critico := (NEW.nivel = '00');  -- ¬N1 · ¬N0
-    v_nivel_bajo    := (NEW.nivel = '01');  -- ¬N1 · N0
-
-    -- Resolver alertas previas del mismo surtidor si el nivel mejoró
-    IF NEW.nivel IN ('10', '11') THEN
-        UPDATE alertas
-        SET activa = FALSE,
-            resuelta_en = NOW()
-        WHERE surtidor_id = NEW.id AND activa = TRUE;
-    END IF;
-
-    -- Generar nueva alerta si es necesario
-    IF v_nivel_critico THEN
-        INSERT INTO alertas (surtidor_id, tipo, nivel)
-        VALUES (NEW.id, 'critico', NEW.nivel);
-    ELSIF v_nivel_bajo THEN
-        INSERT INTO alertas (surtidor_id, tipo, nivel)
-        VALUES (NEW.id, 'bajo', NEW.nivel);
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_control_nivel
-    AFTER UPDATE OF nivel ON surtidores
-    FOR EACH ROW
-    WHEN (OLD.nivel IS DISTINCT FROM NEW.nivel)
-    EXECUTE FUNCTION generar_alerta_nivel();
+    EXECUTE FUNCTION actualizar_timestamp();
 ```
 
 ### `actualizar_nivel_por_venta()`
-
-Actualiza el nivel del surtidor automáticamente después de cada venta, restando los litros vendidos.
 
 ```sql
 CREATE OR REPLACE FUNCTION actualizar_nivel_por_venta()
 RETURNS TRIGGER AS $$
 DECLARE
     v_capacidad NUMERIC;
-    v_nivel_actual NUMERIC;
-    v_nuevo_nivel NUMERIC;
+    v_nivel_actual_litros NUMERIC;
+    v_nuevo_nivel_litros NUMERIC;
     v_porcentaje NUMERIC;
 BEGIN
-    -- Obtener capacidad y nivel actual del surtidor
-    SELECT capacidad,
-           CASE s.nivel
-               WHEN '11' THEN 100.0
-               WHEN '10' THEN 50.0
-               WHEN '01' THEN 25.0
-               ELSE 0.0
-           END
-    INTO v_capacidad, v_nivel_actual
-    FROM surtidores s
-    WHERE s.id = NEW.surtidor_id;
+    SELECT capacidad, nivel_litros
+    INTO v_capacidad, v_nivel_actual_litros
+    FROM surtidores
+    WHERE id = NEW.surtidor_id;
 
-    -- Calcular nuevo nivel como porcentaje
-    v_nuevo_nivel := v_nivel_actual - ((NEW.litros / v_capacidad) * 100);
-    v_porcentaje := GREATEST(0, v_nuevo_nivel);
+    v_nuevo_nivel_litros := GREATEST(0, v_nivel_actual_litros - NEW.litros);
+    v_porcentaje := (v_nuevo_nivel_litros / v_capacidad) * 100;
 
-    -- Actualizar nivel en representación binaria
     UPDATE surtidores
-    SET nivel = CASE
-        WHEN v_porcentaje <= 0   THEN '00'  -- Vacío
-        WHEN v_porcentaje <= 25  THEN '01'  -- 25%
-        WHEN v_porcentaje <= 50  THEN '10'  -- 50%
-        ELSE '11'                          -- 100% (o ≥ 50%)
-    END
+    SET nivel_litros = v_nuevo_nivel_litros,
+        nivel = CASE
+            WHEN v_porcentaje <= 0  THEN 'vacio'::nivel_combustible
+            WHEN v_porcentaje <= 25 THEN 'bajo'::nivel_combustible
+            WHEN v_porcentaje <= 50 THEN 'medio'::nivel_combustible
+            ELSE 'lleno'::nivel_combustible
+        END
     WHERE id = NEW.surtidor_id;
 
     RETURN NEW;
@@ -318,143 +639,413 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trigger_venta_actualiza_nivel
     AFTER INSERT ON ventas
     FOR EACH ROW
+    WHEN (NEW.anulada = FALSE)
     EXECUTE FUNCTION actualizar_nivel_por_venta();
+```
+
+### `generar_alerta_nivel()`
+
+```sql
+CREATE OR REPLACE FUNCTION generar_alerta_nivel()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Resolver alertas previas si el nivel mejoró
+    IF NEW.nivel IN ('medio', 'lleno') THEN
+        UPDATE alertas
+        SET activa = FALSE, resuelta_en = NOW()
+        WHERE surtidor_id = NEW.id AND activa = TRUE;
+        RETURN NEW;
+    END IF;
+
+    -- Evitar alertas duplicadas activas
+    IF EXISTS (
+        SELECT 1 FROM alertas
+        WHERE surtidor_id = NEW.id AND activa = TRUE AND tipo = CASE
+            WHEN NEW.nivel = 'vacio' THEN 'critico'::tipo_alerta
+            WHEN NEW.nivel = 'bajo' THEN 'bajo'::tipo_alerta
+        END
+    ) THEN
+        RETURN NEW;
+    END IF;
+
+    -- Generar nueva alerta
+    INSERT INTO alertas (surtidor_id, tipo, nivel)
+    VALUES (
+        NEW.id,
+        CASE
+            WHEN NEW.nivel = 'vacio' THEN 'critico'::tipo_alerta
+            WHEN NEW.nivel = 'bajo' THEN 'bajo'::tipo_alerta
+        END,
+        NEW.nivel
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_control_nivel
+    AFTER UPDATE OF nivel ON surtidores
+    FOR EACH ROW
+    WHEN (OLD.nivel IS DISTINCT FROM NEW.nivel AND NEW.nivel IN ('vacio', 'bajo'))
+    EXECUTE FUNCTION generar_alerta_nivel();
+```
+
+### `actualizar_nivel_por_abastecimiento()`
+
+```sql
+CREATE OR REPLACE FUNCTION actualizar_nivel_por_abastecimiento()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_capacidad NUMERIC;
+    v_nivel_actual NUMERIC;
+    v_nuevo_nivel NUMERIC;
+    v_porcentaje NUMERIC;
+BEGIN
+    SELECT capacidad, nivel_litros
+    INTO v_capacidad, v_nivel_actual
+    FROM surtidores
+    WHERE id = NEW.surtidor_id;
+
+    v_nuevo_nivel := LEAST(v_capacidad, v_nivel_actual + NEW.litros);
+    v_porcentaje := (v_nuevo_nivel / v_capacidad) * 100;
+
+    UPDATE surtidores
+    SET nivel_litros = v_nuevo_nivel,
+        nivel = CASE
+            WHEN v_porcentaje <= 0  THEN 'vacio'::nivel_combustible
+            WHEN v_porcentaje <= 25 THEN 'bajo'::nivel_combustible
+            WHEN v_porcentaje <= 50 THEN 'medio'::nivel_combustible
+            ELSE 'lleno'::nivel_combustible
+        END
+    WHERE id = NEW.surtidor_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_abastecimiento_actualiza_nivel
+    AFTER INSERT ON abastecimientos
+    FOR EACH ROW
+    EXECUTE FUNCTION actualizar_nivel_por_abastecimiento();
+```
+
+### `calcular_totales_turno()`
+
+```sql
+CREATE OR REPLACE FUNCTION calcular_totales_turno(p_turno_id UUID)
+RETURNS TABLE(total_ventas NUMERIC, total_litros NUMERIC) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COALESCE(SUM(v.total), 0),
+        COALESCE(SUM(v.litros), 0)
+    FROM ventas v
+    WHERE v.turno_id = p_turno_id AND v.anulada = FALSE;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
 ---
 
-## <a name="políticas-de-seguridad-rls"></a>Políticas de Seguridad (RLS)
+## <a name="politicas-de-seguridad-rls"></a>Politicas de Seguridad (RLS)
 
-Supabase utiliza **Row Level Security (RLS)** para controlar el acceso a los datos a nivel de fila.
+### Estrategia de Acceso por Rol
+
+Cada tabla tiene políticas específicas basadas en el rol del usuario autenticado.
 
 ```sql
--- Habilitar RLS en todas las tablas
+-- ============================================
+-- HABILITAR RLS EN TODAS LAS TABLAS
+-- ============================================
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE surtidores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipos_combustible ENABLE ROW LEVEL SECURITY;
+ALTER TABLE precios_combustible ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ventas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE metodos_pago ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alertas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE abastecimientos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE turnos ENABLE ROW LEVEL SECURITY;
 
--- Políticas para usuarios autenticados
+-- ============================================
+-- POLÍTICAS POR TABLA
+-- ============================================
 
--- SURTIDORES: CRUD completo para usuarios autenticados
-CREATE POLICY "Usuarios autenticados pueden leer surtidores"
+-- PROFILES: cada usuario ve su perfil; admin ve todos
+CREATE POLICY "Usuarios ven su propio perfil"
+    ON profiles FOR SELECT
+    USING (id = auth.uid() OR verificar_rol('admin'));
+
+CREATE POLICY "Admin puede editar perfiles"
+    ON profiles FOR UPDATE
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
+
+-- USER_ROLES: solo admin gestiona roles
+CREATE POLICY "Admin gestiona roles"
+    ON user_roles FOR ALL
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
+
+CREATE POLICY "Usuarios ven sus propios roles"
+    ON user_roles FOR SELECT
+    USING (usuario_id = auth.uid());
+
+-- SURTIDORES: todos los roles autenticados pueden leer; solo admin escribe
+CREATE POLICY "Lectura de surtidores"
     ON surtidores FOR SELECT
     TO authenticated
     USING (TRUE);
 
-CREATE POLICY "Usuarios autenticados pueden crear surtidores"
+CREATE POLICY "Admin puede gestionar surtidores"
     ON surtidores FOR INSERT
     TO authenticated
-    WITH CHECK (TRUE);
+    WITH CHECK (verificar_rol('admin'));
 
-CREATE POLICY "Usuarios autenticados pueden editar surtidores"
+CREATE POLICY "Admin puede editar surtidores"
     ON surtidores FOR UPDATE
     TO authenticated
-    USING (TRUE)
-    WITH CHECK (TRUE);
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
 
-CREATE POLICY "Usuarios autenticados pueden eliminar surtidores"
+CREATE POLICY "Admin puede eliminar surtidores"
     ON surtidores FOR DELETE
     TO authenticated
-    USING (TRUE);
+    USING (verificar_rol('admin'));
 
--- VENTAS: Solo lectura para todos, escritura para autenticados
-CREATE POLICY "Lectura de ventas para autenticados"
+-- VENTAS: operadores crean, supervisores y admin leen todo
+CREATE POLICY "Lectura de ventas"
     ON ventas FOR SELECT
     TO authenticated
-    USING (TRUE);
+    USING (
+        registrado_por = auth.uid() OR
+        verificar_rol('admin') OR
+        verificar_rol('supervisor') OR
+        verificar_rol('auditor')
+    );
 
-CREATE POLICY "Inserción de ventas para autenticados"
+CREATE POLICY "Operadores pueden crear ventas"
     ON ventas FOR INSERT
     TO authenticated
-    WITH CHECK (TRUE);
+    WITH CHECK (
+        verificar_rol('operador') OR
+        verificar_rol('admin')
+    );
 
--- ALERTAS: Lectura para autenticados, solo el sistema inserta
-CREATE POLICY "Lectura de alertas para autenticados"
+CREATE POLICY "Admin y supervisores pueden anular ventas"
+    ON ventas FOR UPDATE
+    TO authenticated
+    USING (verificar_rol('admin') OR verificar_rol('supervisor'))
+    WITH CHECK (verificar_rol('admin') OR verificar_rol('supervisor'));
+
+-- ALERTAS: lectura para todos, solo admin/supervisor resuelve
+CREATE POLICY "Lectura de alertas"
     ON alertas FOR SELECT
     TO authenticated
     USING (TRUE);
 
-CREATE POLICY "El sistema puede insertar alertas"
-    ON alertas FOR INSERT
-    TO authenticated
-    WITH CHECK (TRUE);
-
-CREATE POLICY "Usuarios pueden resolver alertas"
+CREATE POLICY "Admin y supervisor pueden resolver alertas"
     ON alertas FOR UPDATE
     TO authenticated
-    USING (TRUE)
-    WITH CHECK (TRUE);
+    USING (verificar_rol('admin') OR verificar_rol('supervisor'))
+    WITH CHECK (verificar_rol('admin') OR verificar_rol('supervisor'));
+
+-- TURNOS: operadores ven su turno, supervisores/admin ven todos
+CREATE POLICY "Lectura de turnos"
+    ON turnos FOR SELECT
+    TO authenticated
+    USING (
+        operador_id = auth.uid() OR
+        supervisor_id = auth.uid() OR
+        verificar_rol('admin') OR
+        verificar_rol('supervisor')
+    );
+
+CREATE POLICY "Operadores pueden crear turnos"
+    ON turnos FOR INSERT
+    TO authenticated
+    WITH CHECK (verificar_rol('operador') OR verificar_rol('admin'));
+
+CREATE POLICY "Admin y supervisor pueden cerrar turnos"
+    ON turnos FOR UPDATE
+    TO authenticated
+    USING (verificar_rol('admin') OR verificar_rol('supervisor'))
+    WITH CHECK (verificar_rol('admin') OR verificar_rol('supervisor'));
+
+-- PROVEEDORES Y ABASTECIMIENTOS: solo admin gestiona
+CREATE POLICY "Lectura de proveedores"
+    ON proveedores FOR SELECT
+    TO authenticated
+    USING (TRUE);
+
+CREATE POLICY "Admin gestiona proveedores"
+    ON proveedores FOR ALL
+    TO authenticated
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
+
+CREATE POLICY "Lectura de abastecimientos"
+    ON abastecimientos FOR SELECT
+    TO authenticated
+    USING (TRUE);
+
+CREATE POLICY "Admin gestiona abastecimientos"
+    ON abastecimientos FOR ALL
+    TO authenticated
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
+
+-- CONFIGURACIÓN (roles, tipos_combustible, metodos_pago, precios): solo admin
+CREATE POLICY "Admin gestiona configuración"
+    ON roles FOR ALL
+    TO authenticated
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
+
+CREATE POLICY "Lectura de configuración"
+    ON roles FOR SELECT
+    TO authenticated
+    USING (TRUE);
+
+CREATE POLICY "Admin gestiona precios"
+    ON precios_combustible FOR ALL
+    TO authenticated
+    USING (verificar_rol('admin'))
+    WITH CHECK (verificar_rol('admin'));
 ```
 
 ---
 
-## <a name="índices"></a>Índices
+## <a name="vistas-para-reportes"></a>Vistas para Reportes
 
-Índices recomendados para optimizar consultas frecuentes:
+### `reporte_ventas_diarias`
 
 ```sql
--- Búsqueda rápida de surtidores por número (único, ya tiene índice)
-CREATE INDEX idx_surtidores_combustible ON surtidores(combustible);
+CREATE VIEW reporte_ventas_diarias AS
+SELECT
+    DATE(v.fecha) AS dia,
+    tc.nombre AS combustible,
+    COUNT(v.id) AS total_ventas,
+    SUM(v.litros) AS total_litros,
+    SUM(v.subtotal) AS total_subtotal,
+    SUM(v.impuesto) AS total_impuesto,
+    SUM(v.total) AS total_ingresos
+FROM ventas v
+JOIN tipos_combustible tc ON tc.id = v.tipo_combustible_id
+WHERE v.anulada = FALSE
+GROUP BY DATE(v.fecha), tc.nombre
+ORDER BY dia DESC, tc.nombre;
+```
+
+### `reporte_inventario_actual`
+
+```sql
+CREATE VIEW reporte_inventario_actual AS
+SELECT
+    s.numero AS surtidor,
+    tc.nombre AS combustible,
+    s.capacidad,
+    s.nivel_litros,
+    ROUND((s.nivel_litros / s.capacidad) * 100, 1) AS porcentaje,
+    s.nivel,
+    CASE
+        WHEN s.nivel IN ('vacio', 'bajo') THEN '⚠️ Atención'
+        ELSE '✅ Normal'
+    END AS estado
+FROM surtidores s
+JOIN tipos_combustible tc ON tc.id = s.tipo_combustible_id
+WHERE s.activo = TRUE
+ORDER BY s.numero;
+```
+
+### `reporte_ingresos_por_combustible`
+
+```sql
+CREATE VIEW reporte_ingresos_por_combustible AS
+SELECT
+    tc.nombre AS combustible,
+    EXTRACT(YEAR FROM v.fecha) AS anio,
+    EXTRACT(MONTH FROM v.fecha) AS mes,
+    SUM(v.litros) AS litros_vendidos,
+    SUM(v.total) AS ingresos_totales,
+    AVG(v.precio_unitario) AS precio_promedio
+FROM ventas v
+JOIN tipos_combustible tc ON tc.id = v.tipo_combustible_id
+WHERE v.anulada = FALSE
+GROUP BY tc.nombre, EXTRACT(YEAR FROM v.fecha), EXTRACT(MONTH FROM v.fecha)
+ORDER BY anio DESC, mes DESC, tc.nombre;
+```
+
+### `reporte_alertas_activas`
+
+```sql
+CREATE VIEW reporte_alertas_activas AS
+SELECT
+    a.id,
+    s.numero AS surtidor,
+    tc.nombre AS combustible,
+    a.tipo,
+    a.nivel,
+    a.creado_en,
+    EXTRACT(EPOCH FROM (NOW() - a.creado_en)) / 3600 AS horas_activa
+FROM alertas a
+JOIN surtidores s ON s.id = a.surtidor_id
+JOIN tipos_combustible tc ON tc.id = s.tipo_combustible_id
+WHERE a.activa = TRUE
+ORDER BY a.creado_en DESC;
+```
+
+---
+
+## <a name="indices"></a>Indices
+
+```sql
+-- Profiles
+CREATE INDEX idx_profiles_email ON profiles(email);
+CREATE INDEX idx_profiles_activo ON profiles(activo);
+
+-- User Roles
+CREATE INDEX idx_user_roles_usuario ON user_roles(usuario_id);
+CREATE INDEX idx_user_roles_rol ON user_roles(rol);
+
+-- Surtidores
+CREATE INDEX idx_surtidores_combustible ON surtidores(tipo_combustible_id);
 CREATE INDEX idx_surtidores_nivel ON surtidores(nivel);
+CREATE INDEX idx_surtidores_activo ON surtidores(activo);
 
--- Consultas de ventas por fecha (reportes diarios)
-CREATE INDEX idx_ventas_fecha ON ventas(fecha);
+-- Precios
+CREATE INDEX idx_precios_vigentes ON precios_combustible(tipo_combustible_id, fecha_inicio, fecha_fin);
+CREATE INDEX idx_precios_fecha ON precios_combustible(fecha_inicio DESC);
+
+-- Ventas
+CREATE INDEX idx_ventas_fecha ON ventas(fecha DESC);
 CREATE INDEX idx_ventas_surtidor ON ventas(surtidor_id);
-CREATE INDEX idx_ventas_combustible ON ventas(combustible);
+CREATE INDEX idx_ventas_combustible ON ventas(tipo_combustible_id);
+CREATE INDEX idx_ventas_registrado_por ON ventas(registrado_por);
+CREATE INDEX idx_ventas_turno ON ventas(turno_id);
+CREATE INDEX idx_ventas_anuladas ON ventas(anulada) WHERE anulada = TRUE;
 
--- Alertas activas
+-- Pagos
+CREATE INDEX idx_pagos_venta ON pagos(venta_id);
+CREATE INDEX idx_pagos_metodo ON pagos(metodo_pago_id);
+
+-- Alertas
 CREATE INDEX idx_alertas_activas ON alertas(activa) WHERE activa = TRUE;
 CREATE INDEX idx_alertas_surtidor ON alertas(surtidor_id);
-```
+CREATE INDEX idx_alertas_tipo ON alertas(tipo);
 
----
+-- Abastecimientos
+CREATE INDEX idx_abastecimientos_fecha ON abastecimientos(fecha DESC);
+CREATE INDEX idx_abastecimientos_surtidor ON abastecimientos(surtidor_id);
+CREATE INDEX idx_abastecimientos_proveedor ON abastecimientos(proveedor_id);
 
-## <a name="relación-con-sistemas-digitales"></a>Relación con Sistemas Digitales
-
-### Representación Binaria de Niveles
-
-| Bits (N1 N0) | Nivel | Porcentaje | Interpretación |
-|:------------:|:-----:|:----------:|:--------------:|
-| `00` | Vacío | 0% | Surtidor vacío, alerta **roja** |
-| `01` | Bajo | 25% | Nivel bajo, alerta **amarilla** |
-| `10` | Medio | 50% | Operación normal |
-| `11` | Lleno | 100% | Capacidad máxima |
-
-### Compuertas Lógicas para Alertas
-
-La lógica de alertas se deriva de un **mapa de Karnaugh**:
-
-```
-Expresión booleana minimizada:
-
-Alerta_Amarilla (bajo) = ¬N1 · N0    → nivel '01'
-Alerta_Roja (crítico) = ¬N1 · ¬N0    → nivel '00'
-
-Circuito lógico:
-
-  N1 ──┬── INV ──┐
-       │         ├── AND ── Alerta_Amarilla
-  N0 ──┴─────────┘
-
-  N1 ──┬── INV ──┐
-       │         ├── AND ── Alerta_Roja
-  N0 ──┴── INV ──┘
-```
-
-### Decodificador de Combustible
-
-```sql
-CREATE OR REPLACE FUNCTION decodificar_combustible(codigo VARCHAR(2))
-RETURNS tipo_combustible AS $$
-BEGIN
-    RETURN CASE codigo
-        WHEN '00' THEN 'gasolina_regular'::tipo_combustible
-        WHEN '01' THEN 'gasolina_premium'::tipo_combustible
-        WHEN '10' THEN 'diesel'::tipo_combustible
-        ELSE NULL
-    END;
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+-- Turnos
+CREATE INDEX idx_turnos_operador ON turnos(operador_id);
+CREATE INDEX idx_turnos_fecha ON turnos(inicio DESC);
+CREATE INDEX idx_turnos_cerrados ON turnos(cerrado) WHERE cerrado = FALSE;
 ```
 
 ---
@@ -471,59 +1062,207 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 -- Script completo de base de datos
 -- ============================================
 
+-- 0. EXTENSIONES
+-- ============================================
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- 1. TIPOS PERSONALIZADOS
 -- ============================================
+CREATE TYPE tipo_alerta AS ENUM ('bajo', 'critico');
+CREATE TYPE nivel_combustible AS ENUM ('vacio', 'bajo', 'medio', 'lleno');
 
-CREATE TYPE tipo_combustible AS ENUM (
-    'gasolina_regular',
-    'gasolina_premium',
-    'diesel'
-);
-
-CREATE TYPE tipo_alerta AS ENUM (
-    'bajo',
-    'critico'
-);
-
--- 2. TABLAS
+-- 2. TABLAS DE AUTENTICACIÓN Y ROLES
 -- ============================================
 
-CREATE TABLE surtidores (
-    id              SERIAL PRIMARY KEY,
-    numero          INTEGER NOT NULL UNIQUE,
-    combustible     tipo_combustible NOT NULL,
-    capacidad       NUMERIC(10, 2) NOT NULL CHECK (capacidad > 0),
-    nivel           VARCHAR(2) NOT NULL DEFAULT '11'
-                    CHECK (nivel IN ('00', '01', '10', '11')),
+CREATE TABLE profiles (
+    id              UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email           TEXT NOT NULL,
+    nombre_completo TEXT NOT NULL,
+    telefono        TEXT,
+    activo          BOOLEAN NOT NULL DEFAULT TRUE,
     creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     actualizado_en  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE roles (
+    nombre      TEXT PRIMARY KEY,
+    descripcion TEXT NOT NULL,
+    permisos    JSONB NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE user_roles (
+    usuario_id  UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    rol         TEXT NOT NULL REFERENCES roles(nombre) ON DELETE CASCADE,
+    asignado_en TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (usuario_id, rol)
+);
+
+-- 3. TABLAS DE CONFIGURACIÓN
+-- ============================================
+
+CREATE TABLE tipos_combustible (
+    id          TEXT PRIMARY KEY,
+    nombre      TEXT NOT NULL UNIQUE,
+    descripcion TEXT,
+    unidad      TEXT NOT NULL DEFAULT 'litro' CHECK (unidad IN ('litro', 'galon')),
+    activo      BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE metodos_pago (
+    id      TEXT PRIMARY KEY,
+    nombre  TEXT NOT NULL UNIQUE,
+    activo  BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- 4. TABLAS DEL NEGOCIO
+-- ============================================
+
+CREATE TABLE surtidores (
+    id                  SERIAL PRIMARY KEY,
+    numero              INTEGER NOT NULL UNIQUE,
+    tipo_combustible_id TEXT NOT NULL REFERENCES tipos_combustible(id),
+    capacidad           NUMERIC(10, 2) NOT NULL CHECK (capacidad > 0),
+    nivel               nivel_combustible NOT NULL DEFAULT 'lleno',
+    nivel_litros        NUMERIC(10, 2) NOT NULL CHECK (nivel_litros >= 0),
+    activo              BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_por          UUID REFERENCES profiles(id),
+    creado_en           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    actualizado_en      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE precios_combustible (
+    id                    SERIAL PRIMARY KEY,
+    tipo_combustible_id   TEXT NOT NULL REFERENCES tipos_combustible(id),
+    precio_por_litro      NUMERIC(10, 2) NOT NULL CHECK (precio_por_litro > 0),
+    fecha_inicio          DATE NOT NULL,
+    fecha_fin             DATE,
+    actualizado_por       UUID REFERENCES profiles(id),
+    creado_en             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE turnos (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    operador_id     UUID NOT NULL REFERENCES profiles(id),
+    supervisor_id   UUID REFERENCES profiles(id),
+    inicio          TIMESTAMPTZ NOT NULL,
+    fin             TIMESTAMPTZ,
+    ventas_total    NUMERIC(10, 2) DEFAULT 0,
+    litros_total    NUMERIC(10, 2) DEFAULT 0,
+    cerrado         BOOLEAN NOT NULL DEFAULT FALSE,
+    notas           TEXT,
+    creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE ventas (
-    id                SERIAL PRIMARY KEY,
-    surtidor_id       INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE RESTRICT,
-    fecha             TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    combustible       tipo_combustible NOT NULL,
-    litros            NUMERIC(10, 2) NOT NULL CHECK (litros > 0),
-    precio_unitario   NUMERIC(10, 2) NOT NULL CHECK (precio_unitario > 0),
-    total             NUMERIC(10, 2) NOT NULL CHECK (total > 0),
-    creado_en         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    surtidor_id           INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE RESTRICT,
+    tipo_combustible_id   TEXT NOT NULL REFERENCES tipos_combustible(id),
+    litros                NUMERIC(10, 2) NOT NULL CHECK (litros > 0),
+    precio_unitario       NUMERIC(10, 2) NOT NULL CHECK (precio_unitario > 0),
+    subtotal              NUMERIC(10, 2) NOT NULL CHECK (subtotal > 0),
+    impuesto              NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (impuesto >= 0),
+    total                 NUMERIC(10, 2) NOT NULL CHECK (total > 0),
+    registrado_por        UUID NOT NULL REFERENCES profiles(id),
+    turno_id              UUID REFERENCES turnos(id),
+    notas                 TEXT,
+    anulada               BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    creado_en             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE pagos (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    venta_id        UUID NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+    metodo_pago_id  TEXT NOT NULL REFERENCES metodos_pago(id),
+    monto           NUMERIC(10, 2) NOT NULL CHECK (monto > 0),
+    referencia      TEXT,
+    creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE alertas (
     id              SERIAL PRIMARY KEY,
     surtidor_id     INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE CASCADE,
     tipo            tipo_alerta NOT NULL,
-    nivel           VARCHAR(2) NOT NULL CHECK (nivel IN ('00', '01', '10', '11')),
+    nivel           nivel_combustible NOT NULL,
     activa          BOOLEAN NOT NULL DEFAULT TRUE,
+    resuelto_por    UUID REFERENCES profiles(id),
     creado_en       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     resuelta_en     TIMESTAMPTZ
 );
 
--- 3. FUNCIONES Y TRIGGERS
+CREATE TABLE proveedores (
+    id          SERIAL PRIMARY KEY,
+    nombre      TEXT NOT NULL,
+    nit         TEXT UNIQUE,
+    contacto    TEXT,
+    telefono    TEXT,
+    email       TEXT,
+    direccion   TEXT,
+    activo      BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE abastecimientos (
+    id                    SERIAL PRIMARY KEY,
+    surtidor_id           INTEGER NOT NULL REFERENCES surtidores(id) ON DELETE RESTRICT,
+    proveedor_id          INTEGER NOT NULL REFERENCES proveedores(id) ON DELETE RESTRICT,
+    tipo_combustible_id   TEXT NOT NULL REFERENCES tipos_combustible(id),
+    litros                NUMERIC(10, 2) NOT NULL CHECK (litros > 0),
+    precio_por_litro      NUMERIC(10, 2) NOT NULL CHECK (precio_por_litro > 0),
+    costo_total           NUMERIC(10, 2) NOT NULL CHECK (costo_total > 0),
+    factura               TEXT,
+    registrado_por        UUID NOT NULL REFERENCES profiles(id),
+    fecha                 TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    creado_en             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 5. DATOS INICIALES
 -- ============================================
 
-CREATE OR REPLACE FUNCTION actualizar_actualizado_en()
+INSERT INTO roles (nombre, descripcion, permisos) VALUES
+    ('admin',      'Acceso completo al sistema',                                '["surtidores:*","ventas:*","alertas:*","reportes:*","usuarios:*","config:*"]'),
+    ('supervisor', 'Gestión operativa, alertas y reportes',                     '["surtidores:read","ventas:read","alertas:*","reportes:*","turnos:*"]'),
+    ('operador',   'Registro de ventas y operación de surtidores',              '["surtidores:read","ventas:create","ventas:read","alertas:read","turnos:read"]'),
+    ('auditor',    'Consulta de reportes e historial (solo lectura)',           '["ventas:read","reportes:*","alertas:read","surtidores:read"]');
+
+INSERT INTO tipos_combustible (id, nombre, descripcion) VALUES
+    ('gasolina_regular', 'Gasolina Regular', 'Gasolina de 85 octanos'),
+    ('gasolina_premium', 'Gasolina Premium', 'Gasolina de 95 octanos'),
+    ('diesel',           'Diésel',           'Diésel premium');
+
+INSERT INTO metodos_pago (id, nombre) VALUES
+    ('efectivo',       'Efectivo'),
+    ('tarjeta',        'Tarjeta de Débito/Crédito'),
+    ('transferencia',  'Transferencia Bancaria'),
+    ('credito',        'Crédito');
+
+-- 6. FUNCIONES
+-- ============================================
+
+CREATE OR REPLACE FUNCTION crear_profile_al_registrarse()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, email, nombre_completo)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'nombre_completo', 'Usuario')
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION verificar_rol(rol_requerido TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM user_roles
+        WHERE usuario_id = auth.uid() AND rol = rol_requerido
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION actualizar_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.actualizado_en = NOW();
@@ -531,46 +1270,70 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_actualizar_surtidor
-    BEFORE UPDATE ON surtidores
-    FOR EACH ROW
-    EXECUTE FUNCTION actualizar_actualizado_en();
-
-CREATE OR REPLACE FUNCTION generar_alerta_nivel()
+CREATE OR REPLACE FUNCTION actualizar_nivel_por_venta()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_nivel_bajo BOOLEAN;
-    v_nivel_critico BOOLEAN;
+    v_capacidad NUMERIC;
+    v_nivel_actual_litros NUMERIC;
+    v_nuevo_nivel_litros NUMERIC;
+    v_porcentaje NUMERIC;
 BEGIN
-    v_nivel_critico := (NEW.nivel = '00');
-    v_nivel_bajo    := (NEW.nivel = '01');
+    SELECT capacidad, nivel_litros
+    INTO v_capacidad, v_nivel_actual_litros
+    FROM surtidores WHERE id = NEW.surtidor_id;
 
-    IF NEW.nivel IN ('10', '11') THEN
-        UPDATE alertas
-        SET activa = FALSE,
-            resuelta_en = NOW()
-        WHERE surtidor_id = NEW.id AND activa = TRUE;
-    END IF;
+    v_nuevo_nivel_litros := GREATEST(0, v_nivel_actual_litros - NEW.litros);
+    v_porcentaje := (v_nuevo_nivel_litros / v_capacidad) * 100;
 
-    IF v_nivel_critico THEN
-        INSERT INTO alertas (surtidor_id, tipo, nivel)
-        VALUES (NEW.id, 'critico', NEW.nivel);
-    ELSIF v_nivel_bajo THEN
-        INSERT INTO alertas (surtidor_id, tipo, nivel)
-        VALUES (NEW.id, 'bajo', NEW.nivel);
-    END IF;
+    UPDATE surtidores
+    SET nivel_litros = v_nuevo_nivel_litros,
+        nivel = CASE
+            WHEN v_porcentaje <= 0  THEN 'vacio'::nivel_combustible
+            WHEN v_porcentaje <= 25 THEN 'bajo'::nivel_combustible
+            WHEN v_porcentaje <= 50 THEN 'medio'::nivel_combustible
+            ELSE 'lleno'::nivel_combustible
+        END
+    WHERE id = NEW.surtidor_id;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_control_nivel
-    AFTER UPDATE OF nivel ON surtidores
-    FOR EACH ROW
-    WHEN (OLD.nivel IS DISTINCT FROM NEW.nivel)
-    EXECUTE FUNCTION generar_alerta_nivel();
+CREATE OR REPLACE FUNCTION generar_alerta_nivel()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.nivel IN ('medio', 'lleno') THEN
+        UPDATE alertas
+        SET activa = FALSE, resuelta_en = NOW()
+        WHERE surtidor_id = NEW.id AND activa = TRUE;
+        RETURN NEW;
+    END IF;
 
-CREATE OR REPLACE FUNCTION actualizar_nivel_por_venta()
+    IF EXISTS (
+        SELECT 1 FROM alertas
+        WHERE surtidor_id = NEW.id AND activa = TRUE AND tipo = CASE
+            WHEN NEW.nivel = 'vacio' THEN 'critico'::tipo_alerta
+            WHEN NEW.nivel = 'bajo' THEN 'bajo'::tipo_alerta
+        END
+    ) THEN
+        RETURN NEW;
+    END IF;
+
+    INSERT INTO alertas (surtidor_id, tipo, nivel)
+    VALUES (
+        NEW.id,
+        CASE
+            WHEN NEW.nivel = 'vacio' THEN 'critico'::tipo_alerta
+            WHEN NEW.nivel = 'bajo' THEN 'bajo'::tipo_alerta
+        END,
+        NEW.nivel
+    );
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION actualizar_nivel_por_abastecimiento()
 RETURNS TRIGGER AS $$
 DECLARE
     v_capacidad NUMERIC;
@@ -578,79 +1341,228 @@ DECLARE
     v_nuevo_nivel NUMERIC;
     v_porcentaje NUMERIC;
 BEGIN
-    SELECT capacidad,
-           CASE s.nivel
-               WHEN '11' THEN 100.0
-               WHEN '10' THEN 50.0
-               WHEN '01' THEN 25.0
-               ELSE 0.0
-           END
+    SELECT capacidad, nivel_litros
     INTO v_capacidad, v_nivel_actual
-    FROM surtidores s
-    WHERE s.id = NEW.surtidor_id;
+    FROM surtidores WHERE id = NEW.surtidor_id;
 
-    v_nuevo_nivel := v_nivel_actual - ((NEW.litros / v_capacidad) * 100);
-    v_porcentaje := GREATEST(0, v_nuevo_nivel);
+    v_nuevo_nivel := LEAST(v_capacidad, v_nivel_actual + NEW.litros);
+    v_porcentaje := (v_nuevo_nivel / v_capacidad) * 100;
 
     UPDATE surtidores
-    SET nivel = CASE
-        WHEN v_porcentaje <= 0   THEN '00'
-        WHEN v_porcentaje <= 25  THEN '01'
-        WHEN v_porcentaje <= 50  THEN '10'
-        ELSE '11'
-    END
+    SET nivel_litros = v_nuevo_nivel,
+        nivel = CASE
+            WHEN v_porcentaje <= 0  THEN 'vacio'::nivel_combustible
+            WHEN v_porcentaje <= 25 THEN 'bajo'::nivel_combustible
+            WHEN v_porcentaje <= 50 THEN 'medio'::nivel_combustible
+            ELSE 'lleno'::nivel_combustible
+        END
     WHERE id = NEW.surtidor_id;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- 7. TRIGGERS
+-- ============================================
+
+CREATE TRIGGER trigger_crear_profile
+    AFTER INSERT ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION crear_profile_al_registrarse();
+
+CREATE TRIGGER trigger_actualizar_profile
+    BEFORE UPDATE ON profiles
+    FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
+
+CREATE TRIGGER trigger_actualizar_surtidor
+    BEFORE UPDATE ON surtidores
+    FOR EACH ROW EXECUTE FUNCTION actualizar_timestamp();
+
 CREATE TRIGGER trigger_venta_actualiza_nivel
     AFTER INSERT ON ventas
     FOR EACH ROW
+    WHEN (NEW.anulada = FALSE)
     EXECUTE FUNCTION actualizar_nivel_por_venta();
 
--- 4. ÍNDICES
+CREATE TRIGGER trigger_control_nivel
+    AFTER UPDATE OF nivel ON surtidores
+    FOR EACH ROW
+    WHEN (OLD.nivel IS DISTINCT FROM NEW.nivel AND NEW.nivel IN ('vacio', 'bajo'))
+    EXECUTE FUNCTION generar_alerta_nivel();
+
+CREATE TRIGGER trigger_abastecimiento_actualiza_nivel
+    AFTER INSERT ON abastecimientos
+    FOR EACH ROW EXECUTE FUNCTION actualizar_nivel_por_abastecimiento();
+
+-- 8. VISTAS
 -- ============================================
 
-CREATE INDEX idx_surtidores_combustible ON surtidores(combustible);
+CREATE VIEW reporte_ventas_diarias AS
+SELECT
+    DATE(v.fecha) AS dia,
+    tc.nombre AS combustible,
+    COUNT(v.id) AS total_ventas,
+    SUM(v.litros) AS total_litros,
+    SUM(v.subtotal) AS total_subtotal,
+    SUM(v.impuesto) AS total_impuesto,
+    SUM(v.total) AS total_ingresos
+FROM ventas v
+JOIN tipos_combustible tc ON tc.id = v.tipo_combustible_id
+WHERE v.anulada = FALSE
+GROUP BY DATE(v.fecha), tc.nombre
+ORDER BY dia DESC, tc.nombre;
+
+CREATE VIEW reporte_inventario_actual AS
+SELECT
+    s.numero AS surtidor,
+    tc.nombre AS combustible,
+    s.capacidad,
+    s.nivel_litros,
+    ROUND((s.nivel_litros / s.capacidad) * 100, 1) AS porcentaje,
+    s.nivel,
+    CASE
+        WHEN s.nivel IN ('vacio', 'bajo') THEN '⚠️ Atención'
+        ELSE '✅ Normal'
+    END AS estado
+FROM surtidores s
+JOIN tipos_combustible tc ON tc.id = s.tipo_combustible_id
+WHERE s.activo = TRUE
+ORDER BY s.numero;
+
+CREATE VIEW reporte_alertas_activas AS
+SELECT
+    a.id,
+    s.numero AS surtidor,
+    tc.nombre AS combustible,
+    a.tipo,
+    a.nivel,
+    a.creado_en,
+    EXTRACT(EPOCH FROM (NOW() - a.creado_en)) / 3600 AS horas_activa
+FROM alertas a
+JOIN surtidores s ON s.id = a.surtidor_id
+JOIN tipos_combustible tc ON tc.id = s.tipo_combustible_id
+WHERE a.activa = TRUE
+ORDER BY a.creado_en DESC;
+
+-- 9. ÍNDICES
+-- ============================================
+
+CREATE INDEX idx_profiles_email ON profiles(email);
+CREATE INDEX idx_profiles_activo ON profiles(activo);
+CREATE INDEX idx_user_roles_usuario ON user_roles(usuario_id);
+CREATE INDEX idx_user_roles_rol ON user_roles(rol);
+CREATE INDEX idx_surtidores_combustible ON surtidores(tipo_combustible_id);
 CREATE INDEX idx_surtidores_nivel ON surtidores(nivel);
-CREATE INDEX idx_ventas_fecha ON ventas(fecha);
+CREATE INDEX idx_surtidores_activo ON surtidores(activo);
+CREATE INDEX idx_precios_vigentes ON precios_combustible(tipo_combustible_id, fecha_inicio, fecha_fin);
+CREATE INDEX idx_ventas_fecha ON ventas(fecha DESC);
 CREATE INDEX idx_ventas_surtidor ON ventas(surtidor_id);
-CREATE INDEX idx_ventas_combustible ON ventas(combustible);
+CREATE INDEX idx_ventas_combustible ON ventas(tipo_combustible_id);
+CREATE INDEX idx_ventas_registrado_por ON ventas(registrado_por);
+CREATE INDEX idx_ventas_turno ON ventas(turno_id);
+CREATE INDEX idx_pagos_venta ON pagos(venta_id);
 CREATE INDEX idx_alertas_activas ON alertas(activa) WHERE activa = TRUE;
 CREATE INDEX idx_alertas_surtidor ON alertas(surtidor_id);
+CREATE INDEX idx_abastecimientos_fecha ON abastecimientos(fecha DESC);
+CREATE INDEX idx_abastecimientos_surtidor ON abastecimientos(surtidor_id);
+CREATE INDEX idx_turnos_operador ON turnos(operador_id);
+CREATE INDEX idx_turnos_fecha ON turnos(inicio DESC);
+CREATE INDEX idx_turnos_cerrados ON turnos(cerrado) WHERE cerrado = FALSE;
 
--- 5. RLS (Row Level Security)
+-- 10. RLS (Row Level Security)
 -- ============================================
 
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE surtidores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipos_combustible ENABLE ROW LEVEL SECURITY;
+ALTER TABLE precios_combustible ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ventas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE metodos_pago ENABLE ROW LEVEL SECURITY;
 ALTER TABLE alertas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE abastecimientos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE turnos ENABLE ROW LEVEL SECURITY;
+
+-- PROFILES
+CREATE POLICY "Usuarios ven su propio perfil"
+    ON profiles FOR SELECT
+    USING (id = auth.uid() OR verificar_rol('admin'));
+CREATE POLICY "Admin puede editar perfiles"
+    ON profiles FOR UPDATE
+    USING (verificar_rol('admin')) WITH CHECK (verificar_rol('admin'));
+
+-- USER_ROLES
+CREATE POLICY "Admin gestiona roles"
+    ON user_roles FOR ALL
+    USING (verificar_rol('admin')) WITH CHECK (verificar_rol('admin'));
+CREATE POLICY "Usuarios ven sus roles"
+    ON user_roles FOR SELECT
+    USING (usuario_id = auth.uid());
 
 -- SURTIDORES
-CREATE POLICY "Usuarios autenticados pueden leer surtidores"
+CREATE POLICY "Lectura de surtidores"
     ON surtidores FOR SELECT TO authenticated USING (TRUE);
-CREATE POLICY "Usuarios autenticados pueden crear surtidores"
-    ON surtidores FOR INSERT TO authenticated WITH CHECK (TRUE);
-CREATE POLICY "Usuarios autenticados pueden editar surtidores"
-    ON surtidores FOR UPDATE TO authenticated USING (TRUE) WITH CHECK (TRUE);
-CREATE POLICY "Usuarios autenticados pueden eliminar surtidores"
-    ON surtidores FOR DELETE TO authenticated USING (TRUE);
+CREATE POLICY "Admin gestiona surtidores"
+    ON surtidores FOR INSERT TO authenticated WITH CHECK (verificar_rol('admin'));
+CREATE POLICY "Admin edita surtidores"
+    ON surtidores FOR UPDATE TO authenticated
+    USING (verificar_rol('admin')) WITH CHECK (verificar_rol('admin'));
+CREATE POLICY "Admin elimina surtidores"
+    ON surtidores FOR DELETE TO authenticated USING (verificar_rol('admin'));
 
 -- VENTAS
-CREATE POLICY "Lectura de ventas para autenticados"
-    ON ventas FOR SELECT TO authenticated USING (TRUE);
-CREATE POLICY "Inserción de ventas para autenticados"
-    ON ventas FOR INSERT TO authenticated WITH CHECK (TRUE);
+CREATE POLICY "Lectura de ventas"
+    ON ventas FOR SELECT TO authenticated
+    USING (registrado_por = auth.uid() OR verificar_rol('admin')
+        OR verificar_rol('supervisor') OR verificar_rol('auditor'));
+CREATE POLICY "Operadores crean ventas"
+    ON ventas FOR INSERT TO authenticated
+    WITH CHECK (verificar_rol('operador') OR verificar_rol('admin'));
+CREATE POLICY "Admin y supervisor anulan ventas"
+    ON ventas FOR UPDATE TO authenticated
+    USING (verificar_rol('admin') OR verificar_rol('supervisor'))
+    WITH CHECK (verificar_rol('admin') OR verificar_rol('supervisor'));
 
 -- ALERTAS
-CREATE POLICY "Lectura de alertas para autenticados"
+CREATE POLICY "Lectura de alertas"
     ON alertas FOR SELECT TO authenticated USING (TRUE);
-CREATE POLICY "El sistema puede insertar alertas"
-    ON alertas FOR INSERT TO authenticated WITH CHECK (TRUE);
-CREATE POLICY "Usuarios pueden resolver alertas"
-    ON alertas FOR UPDATE TO authenticated USING (TRUE) WITH CHECK (TRUE);
+CREATE POLICY "Admin y supervisor resuelven alertas"
+    ON alertas FOR UPDATE TO authenticated
+    USING (verificar_rol('admin') OR verificar_rol('supervisor'))
+    WITH CHECK (verificar_rol('admin') OR verificar_rol('supervisor'));
+
+-- TURNOS
+CREATE POLICY "Lectura de turnos"
+    ON turnos FOR SELECT TO authenticated
+    USING (operador_id = auth.uid() OR supervisor_id = auth.uid()
+        OR verificar_rol('admin') OR verificar_rol('supervisor'));
+CREATE POLICY "Operadores crean turnos"
+    ON turnos FOR INSERT TO authenticated
+    WITH CHECK (verificar_rol('operador') OR verificar_rol('admin'));
+CREATE POLICY "Admin y supervisor cierran turnos"
+    ON turnos FOR UPDATE TO authenticated
+    USING (verificar_rol('admin') OR verificar_rol('supervisor'))
+    WITH CHECK (verificar_rol('admin') OR verificar_rol('supervisor'));
+
+-- PROVEEDORES Y ABASTECIMIENTOS
+CREATE POLICY "Lectura de proveedores"
+    ON proveedores FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "Admin gestiona proveedores"
+    ON proveedores FOR ALL TO authenticated
+    USING (verificar_rol('admin')) WITH CHECK (verificar_rol('admin'));
+CREATE POLICY "Lectura de abastecimientos"
+    ON abastecimientos FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "Admin gestiona abastecimientos"
+    ON abastecimientos FOR ALL TO authenticated
+    USING (verificar_rol('admin')) WITH CHECK (verificar_rol('admin'));
+
+-- CONFIGURACIÓN
+CREATE POLICY "Lectura de configuración"
+    ON tipos_combustible FOR SELECT TO authenticated USING (TRUE);
+CREATE POLICY "Admin gestiona configuración"
+    ON tipos_combustible FOR ALL TO authenticated
+    USING (verificar_rol('admin')) WITH CHECK (verificar_rol('admin'));
 
 -- ============================================
 -- FIN DEL SCRIPT

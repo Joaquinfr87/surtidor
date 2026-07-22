@@ -12,7 +12,7 @@
 ![ShadCN](https://img.shields.io/badge/ShadCN_UI-000000?style=for-the-badge&logo=shadcnui)
 ![Zod](https://img.shields.io/badge/Zod-3E69B2?style=for-the-badge&logo=zod)
 
-**Aplicación multiplataforma para la gestión integral de estaciones de servicio, aplicando conceptos de Sistemas Digitales.**
+**Aplicación web moderna para la gestión integral de estaciones de servicio.**
 
 </div>
 
@@ -37,13 +37,13 @@
 
 **"El Surtidor Cochabambino"** es un sistema digital de control y gestión desarrollado para estaciones de servicio en Cochabamba, Bolivia. La aplicación permite administrar surtidores de gasolina, registrar ventas, monitorear alertas de nivel de combustible y generar reportes operativos.
 
-El proyecto integra **conceptos de Sistemas Digitales** (códigos binarios, álgebra de Boole, mapas de Karnaugh, compuertas lógicas, codificadores/decodificadores) aplicados a la lógica de negocio, combinados con **patrones de diseño modernos** y **estándares de calidad de software**.
+El proyecto está construido con **tecnologías web modernas**, siguiendo **patrones de diseño actuales** y **estándares de calidad de software**.
 
 ---
 
 ## 🎯 Objetivo
 
-Desarrollar una aplicación multiplataforma que gestione las operaciones de una estación de servicio, aplicando conceptos de Sistemas Digitales y patrones de diseño para garantizar:
+Desarrollar una aplicación web que gestione las operaciones de una estación de servicio, aplicando patrones de diseño modernos para garantizar:
 
 - ✅ Control preciso de inventario de combustible
 - ✅ Registro y facturación de ventas
@@ -75,62 +75,62 @@ Desarrollar una aplicación multiplataforma que gestione las operaciones de una 
 
 ## 🧩 Módulos del Sistema
 
-El sistema se compone de cuatro módulos principales, cada uno con una relación directa con conceptos de **Sistemas Digitales**:
+El sistema se compone de **seis módulos principales**, diseñados para cubrir todas las operaciones de una estación de servicio.
 
 ### ⛽ 1. Surtidores
 
-| Funcionalidad | Descripción |
-|---------------|-------------|
-| Registrar | Agregar nuevos surtidores con número, tipo de combustible, capacidad y nivel actual |
-| Listar | Visualizar todos los surtidores en una tabla interactiva |
-| Editar | Modificar datos del surtidor |
-| Eliminar | Dar de baja surtidores del sistema |
+| Funcionalidad | Descripción | Rol |
+|---------------|-------------|-----|
+| Registrar | Agregar nuevos surtidores con tipo de combustible, capacidad y nivel | Admin |
+| Listar | Visualizar todos los surtidores en tabla interactiva con nivel en litros | Todos |
+| Editar | Modificar datos del surtidor | Admin |
+| Eliminar | Dar de baja surtidores del sistema | Admin |
 
-**🔗 Relación con Sistemas Digitales:** Los niveles de combustible se representan en **código binario**:
-| Binario | Nivel |
-|---------|-------|
-| `00` | Vacío (0%) |
-| `01` | Bajo (25%) |
-| `10` | Medio (50%) |
-| `11` | Lleno (100%) |
+Los niveles de combustible se controlan con precisión en **litros exactos** y se clasifican en: `vacio`, `bajo`, `medio` y `lleno`.
 
 ### 💰 2. Ventas
 
-| Funcionalidad | Descripción |
-|---------------|-------------|
-| Registrar | Crear ventas (fecha, combustible, litros, precio, total, surtidor) |
-| Listar | Visualizar historial de ventas con ordenamiento y filtros |
-| Editar | Modificar registros de ventas |
-| Anular | Cancelar ventas registradas |
+| Funcionalidad | Descripción | Rol |
+|---------------|-------------|-----|
+| Registrar | Crear ventas con litros, precio, impuesto y método de pago | Operador, Admin |
+| Listar | Visualizar historial de ventas con filtros y ordenamiento | Todos |
+| Anular | Cancelar ventas (con control de inventario) | Supervisor, Admin |
 
-**🔗 Relación con Sistemas Digitales:** Los cálculos de totales se realizan utilizando **aritmética binaria** para demostrar principios de operaciones lógicas.
+> Las ventas soportan **múltiples métodos de pago** (efectivo, tarjeta, transferencia, crédito) y pueden dividirse en varios pagos por transacción.
 
 ### 🚨 3. Alertas
 
-| Funcionalidad | Descripción |
-|---------------|-------------|
-| Nivel Bajo | LED **amarillo** cuando el nivel de combustible está por debajo del 25% |
-| Nivel Crítico | LED **rojo** cuando el nivel de combustible está por debajo del 10% |
-| Monitoreo | Dashboard en tiempo real del estado de todos los surtidores |
+| Funcionalidad | Descripción | Rol |
+|---------------|-------------|-----|
+| Nivel Bajo | Notificación cuando el nivel baja del 25% | Todos (lectura) |
+| Nivel Crítico | Notificación cuando el nivel baja del 10% o está vacío | Todos (lectura) |
+| Resolver | Marcar alerta como resuelta tras reabastecer | Supervisor, Admin |
+| Dashboard | Monitoreo en tiempo real del estado de todos los surtidores | Todos |
 
-**🔗 Relación con Sistemas Digitales:** Sistema de alertas diseñado con **compuertas lógicas** y optimizado mediante **mapas de Karnaugh**:
+### 👥 4. Usuarios y Roles
 
-```
-Alerta_Amarilla = (N1 · ¬N0) + (¬N1 · N0)   → Nivel 01 (25%)
-Alerta_Roja     = ¬N1 · ¬N0                   → Nivel 00 (Vacío/Crítico)
+| Funcionalidad | Descripción | Rol |
+|---------------|-------------|-----|
+| Listar usuarios | Ver todos los usuarios del sistema | Admin |
+| Asignar roles | Asignar roles (admin, supervisor, operador, auditor) | Admin |
+| Activar/Desactivar | Gestionar acceso de usuarios | Admin |
 
-Donde N1, N0 son los bits del nivel (MSB, LSB)
-```
+### 🏭 5. Proveedores y Abastecimientos
 
-### 📊 4. Reportes
+| Funcionalidad | Descripción | Rol |
+|---------------|-------------|-----|
+| Proveedores | CRUD de proveedores con NIT, contacto y datos fiscales | Admin |
+| Abastecimientos | Registrar reabastecimiento de surtidores con factura | Admin |
+| Historial | Consultar historial de abastecimientos por surtidor/proveedor | Admin |
 
-| Funcionalidad | Descripción |
-|---------------|-------------|
-| Ventas Diarias | Reporte detallado de ventas del día |
-| Inventario | Estado actual del inventario por combustible |
-| Ingresos | Ingresos agrupados por tipo de combustible |
+### 📊 6. Reportes
 
-**🔗 Relación con Sistemas Digitales:** Uso de **decodificadores** para clasificar y agrupar por tipo de combustible.
+| Funcionalidad | Descripción | Rol |
+|---------------|-------------|-----|
+| Ventas Diarias | Reporte detallado de ventas del día agrupado por combustible | Supervisor, Admin, Auditor |
+| Inventario | Estado actual del inventario por surtidor con porcentaje | Supervisor, Admin, Auditor |
+| Ingresos | Ingresos agrupados por tipo de combustible (mensual) | Supervisor, Admin, Auditor |
+| Alertas Activas | Dashboard de alertas activas con tiempo transcurrido | Supervisor, Admin, Auditor |
 
 ---
 
@@ -148,27 +148,44 @@ Donde N1, N0 son los bits del nivel (MSB, LSB)
 
 > 📚 **Documentación completa de arquitectura** → [`docs/architecture.md`](docs/architecture.md)
 
+### Gestión de Roles y Accesos
+
+| Rol | Acceso |
+|-----|--------|
+| **Admin** | Acceso completo: gestiona surtidores, usuarios, roles, precios, proveedores y configuración |
+| **Supervisor** | Supervisa operaciones: reportes, alertas, turnos, anulación de ventas |
+| **Operador** | Operación diaria: registrar ventas, consultar surtidores y alertas |
+| **Auditor** | Solo lectura: reportes, historial de ventas y alertas |
+
 ### Estructura del Proyecto
 
 ```
 surtidor/
-├── app/                    # App Router (Next.js)
-│   ├── layout.tsx          # Layout raíz
-│   ├── page.tsx            # Página principal
-│   └── globals.css         # Estilos globales
-├── components/             # Componentes reutilizables (ShadCN UI)
-│   ├── ui/                 # Componentes base (botones, inputs, tablas)
-│   └── forms/              # Formularios con React Hook Form + Zod
-├── lib/                    # Utilidades y configuraciones
-│   ├── supabase/           # Cliente Supabase
-│   └── schemas/            # Esquemas de validación Zod
-├── hooks/                  # Custom hooks de React
-├── types/                  # Tipos e interfaces TypeScript
-├── docs/                   # Documentación del proyecto
-│   ├── technologies.md     # Guía de tecnologías
-│   ├── database.md         # Esquema y diseño de base de datos
-│   └── architecture.md     # Arquitectura del sistema
-└── public/                 # Archivos estáticos
+├── app/                          # App Router (Next.js)
+│   ├── (auth)/                   # Auth: login, register
+│   ├── (dashboard)/              # Dashboard protegido
+│   │   ├── surtidores/           # CRUD surtidores
+│   │   ├── ventas/               # Ventas y pagos
+│   │   ├── alertas/              # Alertas en tiempo real
+│   │   ├── reportes/             # Reportes y estadísticas
+│   │   ├── proveedores/          # Gestión de proveedores
+│   │   ├── abastecimientos/      # Reabastecimiento
+│   │   ├── turnos/               # Turnos de operadores
+│   │   ├── precios/              # Historial de precios
+│   │   └── usuarios/             # Admin de usuarios y roles
+│   └── api/                      # API Routes
+├── components/                   # Componentes React
+│   ├── ui/                       # ShadCN UI
+│   ├── forms/                    # Formularios (RHF + Zod)
+│   ├── tables/                   # TanStack Table
+│   └── layout/                   # Sidebar, header, providers
+├── lib/                          # Utilidades
+│   ├── supabase/                 # Clientes Supabase
+│   └── schemas/                  # Schemas Zod
+├── hooks/                        # Custom hooks
+├── types/                        # Tipos TypeScript
+├── docs/                         # Documentación
+└── public/                       # Archivos estáticos
 ```
 
 ---
@@ -177,32 +194,25 @@ surtidor/
 
 > 📚 **Documentación completa de la base de datos** → [`docs/database.md`](docs/database.md)
 
-### Diagrama Entidad-Relación
-
-```
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│  SURTIDORES │───┐   │   VENTAS    │       │   ALERTAS   │
-├─────────────┤   └──>├─────────────┤       ├─────────────┤
-│ id          │       │ id          │       │ id          │
-│ numero      │       │ surtidor_id │───┐   │ surtidor_id │───┐
-│ combustible │       │ fecha       │   │   │ tipo        │   │
-│ capacidad   │       │ combustible │   │   │ nivel       │   │
-│ nivel       │       │ litros      │   │   │ activa      │   │
-│ creado_en   │       │ precio_unit │   │   │ creado_en   │   │
-│ actualizado  │       │ total       │   │   │ resuelta_en │   │
-└─────────────┘       │ surtidor    │   │   └─────────────┘   │
-                       │ creado_en   │   │                     │
-                       └─────────────┘   │                     │
-                                         └─────────────────────┘
-```
-
-### Resumen de Tablas
+### Tablas del Sistema
 
 | Tabla | Descripción |
 |-------|-------------|
-| `surtidores` | Registro de surtidores con nivel de combustible en binario |
-| `ventas` | Historial de transacciones de venta |
-| `alertas` | Registro de alertas generadas por nivel bajo/crítico |
+| `profiles` | Perfiles de usuario vinculados a `auth.users` de Supabase |
+| `roles` | Definición de roles con permisos JSONB |
+| `user_roles` | Asignación de roles a usuarios |
+| `tipos_combustible` | Catálogo de combustibles (admin dinámico) |
+| `surtidores` | Surtidores con nivel en litros exactos |
+| `precios_combustible` | Historial de precios con vigencia por fecha |
+| `ventas` | Ventas con subtotal, impuesto, total y trazabilidad de usuario |
+| `pagos` | Pagos de venta con múltiples métodos (efectivo, tarjeta, etc.) |
+| `metodos_pago` | Catálogo de métodos de pago |
+| `alertas` | Alertas por nivel bajo/crítico con resolución |
+| `proveedores` | Proveedores de combustible |
+| `abastecimientos` | Reabastecimiento de surtidores |
+| `turnos` | Turnos de operadores con totales automáticos |
+
+> 🔐 **Seguridad:** Todas las tablas tienen Row Level Security (RLS) con políticas basadas en roles.
 
 ---
 
@@ -260,7 +270,7 @@ La aplicación está preparada para desplegarse en:
 
 ## 📄 Licencia
 
-Este proyecto se desarrolla con fines educativos como parte de la actividad académica de **Sistemas Digitales**.
+Este proyecto se desarrolla con fines educativos.
 
 ---
 

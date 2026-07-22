@@ -197,28 +197,12 @@ export const surtidorSchema = z.object({
     errorMap: () => ({ message: 'Selecciona un tipo de combustible' })
   }),
   capacidad: z.number().positive('La capacidad debe ser mayor a 0'),
-  nivel: z.enum(['00', '01', '10', '11'], {
-    errorMap: () => ({ message: 'Nivel inválido (00, 01, 10, 11)' })
+  nivel: z.enum(['vacio', 'bajo', 'medio', 'lleno'], {
+    errorMap: () => ({ message: 'Selecciona un nivel válido' })
   })
 })
 
 export type SurtidorInput = z.infer<typeof surtidorSchema>
-```
-
-```typescript
-// Validación del nivel binario con refinements
-export const nivelBinarioSchema = z
-  .enum(['00', '01', '10', '11'])
-  .refine((val) => ['00', '01', '10', '11'].includes(val), {
-    message: 'El nivel debe ser un valor binario de 2 bits (00, 01, 10, 11)'
-  })
-
-export const NivelEnum = z.enum(['00', '01', '10', '11'])
-export type NivelBinario = z.infer<typeof NivelEnum>
-// '00' → Vacío (0%)
-// '01' → Bajo (25%)
-// '10' → Medio (50%)
-// '11' → Lleno (100%)
 ```
 
 ### Recursos
@@ -268,7 +252,7 @@ export function SurtidorForm() {
       numero: undefined,
       combustible: undefined,
       capacidad: undefined,
-      nivel: '11',
+      nivel: 'lleno',
     },
   })
 
@@ -364,10 +348,10 @@ const columns: ColumnDef<Surtidor>[] = [
     accessorKey: 'nivel',
     header: 'Nivel',
     cell: ({ row }) => (
-      <span className={`badge-${row.original.nivel === '11' ? 'green' : row.original.nivel === '10' ? 'yellow' : 'red'}`}>
-        {row.original.nivel === '00' ? 'Vacío' :
-         row.original.nivel === '01' ? '25%' :
-         row.original.nivel === '10' ? '50%' : '100%'}
+      <span className={`badge-${row.original.nivel === 'lleno' ? 'green' : row.original.nivel === 'medio' ? 'yellow' : 'red'}`}>
+        {row.original.nivel === 'vacio' ? 'Vacío' :
+         row.original.nivel === 'bajo' ? 'Bajo' :
+         row.original.nivel === 'medio' ? 'Medio' : 'Lleno'}
       </span>
     ),
   },

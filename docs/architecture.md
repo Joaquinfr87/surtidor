@@ -13,7 +13,6 @@
 5. [Componentes UI](#componentes-ui)
 6. [Rutas y Navegación](#rutas-y-navegación)
 7. [Manejo de Estado](#manejo-de-estado)
-8. [Aplicación de Sistemas Digitales](#aplicación-de-sistemas-digitales)
 
 ---
 
@@ -78,36 +77,31 @@ surtidor/
 │           └── route.ts
 │
 ├── components/                   # Componentes React
-│   ├── ui/                       # Componentes ShadCN UI
-│   │   ├── button.tsx
-│   │   ├── input.tsx
-│   │   ├── select.tsx
-│   │   ├── table.tsx
-│   │   ├── dialog.tsx
-│   │   ├── card.tsx
-│   │   ├── badge.tsx
-│   │   ├── alert.tsx
-│   │   └── toast.tsx
-│   │
-│   ├── forms/                    # Formularios con React Hook Form
+│   ├── ui/                       # Componentes ShadCN UI (button, input, table, dialog, card, etc.)
+│   ├── forms/                    # Formularios con React Hook Form + Zod
 │   │   ├── surtidor-form.tsx     # Formulario de surtidor
-│   │   ├── venta-form.tsx        # Formulario de venta
-│   │   └── login-form.tsx        # Formulario de login
+│   │   ├── venta-form.tsx        # Formulario de venta con pagos
+│   │   ├── login-form.tsx        # Formulario de login
+│   │   └── usuario-form.tsx      # Formulario de usuarios/roles (admin)
 │   │
 │   ├── tables/                   # Tablas con TanStack Table
 │   │   ├── surtidores-table.tsx  # Tabla de surtidores
-│   │   ├── ventas-table.tsx      # Tabla de ventas
-│   │   └── alertas-table.tsx     # Tabla de alertas
+│   │   ├── ventas-table.tsx      # Tabla de ventas con pagos
+│   │   ├── alertas-table.tsx     # Tabla de alertas
+│   │   ├── usuarios-table.tsx    # Tabla de usuarios (admin)
+│   │   └── proveedores-table.tsx # Tabla de proveedores
 │   │
 │   ├── dashboard/                # Componentes del dashboard
 │   │   ├── stats-cards.tsx       # Tarjetas de estadísticas
-│   │   ├── nivel-indicator.tsx   # Indicador de nivel binario
-│   │   └── alerta-led.tsx        # LED de alerta (amarillo/rojo)
+│   │   ├── nivel-indicator.tsx   # Indicador de nivel de combustible
+│   │   ├── alerta-led.tsx        # LED de alerta (amarillo/rojo)
+│   │   └── ventas-chart.tsx      # Gráfico de ventas
 │   │
 │   └── layout/                   # Componentes de layout
-│       ├── sidebar.tsx           # Barra lateral de navegación
-│       ├── header.tsx            # Encabezado
-│       └── providers.tsx         # Providers globales
+│       ├── sidebar.tsx           # Barra lateral con menú por rol
+│       ├── header.tsx            # Encabezado con info de usuario
+│       ├── providers.tsx         # Providers globales
+│       └── role-guard.tsx        # Protección de rutas por rol
 │
 ├── lib/                          # Utilidades y configuraciones
 │   ├── supabase/                 # Clientes de Supabase
@@ -116,21 +110,27 @@ surtidor/
 │   │
 │   ├── schemas/                  # Esquemas de validación Zod
 │   │   ├── surtidor.ts          # Schema de surtidor
-│   │   ├── venta.ts             # Schema de venta
-│   │   └── auth.ts              # Schema de autenticación
+│   │   ├── venta.ts             # Schema de venta con validación de pagos
+│   │   ├── auth.ts              # Schema de autenticación
+│   │   ├── usuario.ts           # Schema de usuarios y roles
+│   │   └── abastecimiento.ts    # Schema de abastecimientos
 │   │
-│   ├── utils.ts                  # Utilidades generales
-│   └── binary.ts                 # Funciones de aritmética binaria
+│   └── utils.ts                  # Utilidades generales
 │
 ├── hooks/                        # Custom hooks
 │   ├── use-surtidores.ts         # Hook para operaciones CRUD
-│   ├── use-ventas.ts            # Hook para ventas
-│   └── use-alertas.ts           # Hook para alertas en tiempo real
+│   ├── use-ventas.ts            # Hook para ventas con pagos
+│   ├── use-alertas.ts           # Hook para alertas en tiempo real
+│   ├── use-usuarios.ts          # Hook para gestión de usuarios (admin)
+│   ├── use-rol.ts               # Hook para verificar rol actual
+│   └── use-turno.ts             # Hook para turno activo
 │
 ├── types/                        # Tipos TypeScript
 │   ├── surtidor.ts
 │   ├── venta.ts
-│   └── alerta.ts
+│   ├── alerta.ts
+│   ├── usuario.ts
+│   └── turno.ts
 │
 ├── docs/                         # Documentación
 │   ├── technologies.md           # Guía de tecnologías
@@ -208,13 +208,68 @@ Los esquemas de Zod se integran con React Hook Form mediante resolvers:
 ```tsx
 const form = useForm<SurtidorInput>({
   resolver: zodResolver(surtidorSchema),
-  defaultValues: { nivel: '11', ... }
+  defaultValues: { nivel: 'lleno', ... }
 })
 ```
 
 ### 4. Tablas Headless con TanStack Table
 
 TanStack Table maneja la lógica (ordenamiento, filtros, paginación) mientras ShadCN Table maneja el renderizado visual.
+
+### 5. Autenticación y Protección de Rutas
+
+El sistema usa **Supabase Auth** con un flujo de autenticación del lado del servidor:
+
+```tsx
+// lib/supabase/middleware.ts
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse } from 'next/server'
+
+export async function updateSession(request) {
+  let response = NextResponse.next()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { cookies: { getAll: () => request.cookies.getAll() } }
+  )
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+  
+  return response
+}
+```
+
+### 6. Control de Acceso por Rol
+
+Cada página del dashboard verifica el rol del usuario antes de renderizar:
+
+```tsx
+// components/layout/role-guard.tsx
+'use client'
+
+import { useRol } from '@/hooks/use-rol'
+
+interface RoleGuardProps {
+  allowedRoles: string[]
+  children: React.ReactNode
+  fallback?: React.ReactNode
+}
+
+export function RoleGuard({ allowedRoles, children, fallback }: RoleGuardProps) {
+  const { rol, isLoading } = useRol()
+
+  if (isLoading) return <div>Cargando...</div>
+  if (!rol || !allowedRoles.includes(rol)) {
+    return fallback ?? <div>No tienes permiso para acceder a esta página.</div>
+  }
+
+  return <>{children}</>
+}
+```
 
 ---
 
@@ -223,28 +278,44 @@ TanStack Table maneja la lógica (ordenamiento, filtros, paginación) mientras S
 ### Operación: Registrar una Venta
 
 ```
-Usuario                          Frontend                          Supabase
+Usuario (Operador)               Frontend                          Supabase
   │                                │                                  │
   │  1. Llena formulario venta     │                                  │
+  │     (surtidor, litros, pago)   │                                  │
   │──────────────────────────────> │                                  │
   │                                │                                  │
   │  2. Valida con Zod             │                                  │
+  │     - surtidor activo?         │                                  │
+  │     - litros ≤ nivel_actual?   │                                  │
+  │     - suma pagos = total?      │                                  │
   │                                │                                  │
   │  3. Envía a Server Action      │                                  │
+  │     (con session de auth)      │                                  │
   │                                │─────────────────────────────────>│
-  │                                │  4. INSERT INTO ventas           │
+  │                                │  4. Verifica rol (operador/admin)│
   │                                │                                  │
-  │                                │  5. TRIGGER: actualizar_nivel    │
-  │                                │     UPDATE surtidores SET nivel  │
+  │                                │  5. SELECT precio vigente       │
+  │                                │     FROM precios_combustible     │
   │                                │                                  │
-  │                                │  6. TRIGGER: generar_alerta      │
-  │                                │     INSERT INTO alertas (si       │
-  │                                │     nivel bajo/crítico)           │
+  │                                │  6. INSERT INTO ventas           │
+  │                                │     (con registrado_por = auth.) │
   │                                │                                  │
-  │                                │  7. Realtime: broadcast cambio   │
+  │                                │  7. INSERT INTO pagos             │
+  │                                │     (uno o varios métodos)       │
+  │                                │                                  │
+  │                                │  8. TRIGGER: actualizar_nivel    │
+  │                                │     UPDATE surtidores            │
+  │                                │     SET nivel_litros -= litros   │
+  │                                │                                  │
+  │                                │  9. TRIGGER: generar_alerta       │
+  │                                │     (si nivel bajo/crítico)      │
+  │                                │                                  │
+  │                                │  10. Realtime: broadcast         │
   │                                │──────────────────────────────────│
   │                                │                                  │
-  │  8. Actualiza UI en tiempo real│                                  │
+  │  11. Actualiza UI en tiempo    │                                  │
+  │      real (nuevo nivel,        │                                  │
+  │      alertas si aplica)        │                                  │
   │<───────────────────────────────│                                  │
 ```
 
@@ -290,19 +361,16 @@ Supabase Realtime                    Frontend
 └──────────┴─────────────────────────────────────────┘
 ```
 
-### Nivel Indicator (Binario)
+### Nivel Indicator
 
 ```
 Surtidor #1 — Gasolina Premium — Capacidad: 1000L
 
-Nivel actual: 01 (25%) — ⚠️ BAJO
+Nivel actual: bajo (250L / 1000L) — ⚠️ BAJO
 
 [████████░░░░░░░░░░░░░░] 25%
 
-LED: 🟡 Amarillo
-
-Representación binaria: N1=0, N0=1
-Alerta: ¬N1 · N0 = 1 · 1 = 1 (activa)
+LED: 🟡 Amarillo — Nivel bajo
 ```
 
 ---
@@ -310,23 +378,47 @@ Alerta: ¬N1 · N0 = 1 · 1 = 1 (activa)
 ## <a name="rutas-y-navegación"></a>Rutas y Navegación
 
 ```
-/                           → Dashboard principal
-/login                      → Inicio de sesión
-/register                   → Registro de usuario
+/                                    → Dashboard principal
+/login                               → Inicio de sesión
+/register                            → Registro de usuario
 
-/surtidores                 → Lista de surtidores (Tabla)
-/surtidores/nuevo           → Registrar surtidor (Formulario)
-/surtidores/[id]            → Detalle del surtidor
-/surtidores/[id]/editar     → Editar surtidor (Formulario)
+/mis-datos                           → Perfil del usuario actual
 
-/ventas                     → Historial de ventas (Tabla)
-/ventas/nueva               → Registrar venta (Formulario)
+# Módulo: Surtidores (admin)
+/surtidores                          → Lista de surtidores
+/surtidores/nuevo                    → Registrar surtidor
+/surtidores/[id]                     → Detalle del surtidor
+/surtidores/[id]/editar              → Editar surtidor
 
-/alertas                    → Dashboard de alertas en tiempo real
+# Módulo: Ventas (operador, supervisor, admin)
+/ventas                              → Historial de ventas
+/ventas/nueva                        → Registrar venta con pago
+/ventas/[id]                         → Detalle de venta
 
-/reportes                   → Reportes generales
-/reportes/diario            → Ventas diarias
-/reportes/inventario        → Inventario por combustible
+# Módulo: Alertas (todos)
+/alertas                             → Dashboard de alertas en tiempo real
+
+# Módulo: Reportes (supervisor, admin, auditor)
+/reportes                            → Reportes generales
+/reportes/diario                     → Ventas diarias
+/reportes/inventario                 → Inventario por combustible
+/reportes/ingresos                   → Ingresos por combustible
+
+# Módulo: Gestión (admin)
+/usuarios                            → Lista de usuarios
+/usuarios/nuevo                      → Crear usuario
+/usuarios/[id]                       → Editar usuario y roles
+/proveedores                         → Lista de proveedores
+/proveedores/nuevo                   → Registrar proveedor
+/abastecimientos                     → Historial de abastecimientos
+/abastecimientos/nuevo               → Registrar abastecimiento
+/precios                             → Historial de precios
+/precios/nuevo                       → Actualizar precio
+
+# Módulo: Turnos (operador, supervisor)
+/turnos                              → Mis turnos
+/turnos/activo                       → Turno actual
+/turnos/[id]                         → Detalle de turno
 ```
 
 ---
@@ -340,71 +432,6 @@ Alerta: ¬N1 · N0 = 1 · 1 = 1 (activa)
 | Estado del servidor | Server Components | Datos iniciales de Supabase |
 | Cache de datos | TanStack Query (futuro) | Refetch y caché de consultas |
 | Tiempo real | Supabase Realtime | Alertas y actualizaciones en vivo |
-
----
-
-## <a name="aplicación-de-sistemas-digitales"></a>Aplicación de Sistemas Digitales
-
-### Resumen de Conceptos
-
-| Concepto SD | Aplicación en el Sistema |
-|-------------|--------------------------|
-| **Códigos binarios** | Niveles de combustible representados como `00`, `01`, `10`, `11` |
-| **Álgebra de Boole** | Expresiones booleanas para determinar alertas |
-| **Mapas de Karnaugh** | Minimización de expresiones lógicas de alertas |
-| **Compuertas lógicas** | Implementación de AND, OR, NOT en lógica de alertas |
-| **Codificadores** | Conversión de nivel numérico a binario |
-| **Decodificadores** | Decodificación de tipo de combustible desde binario |
-| **Aritmética binaria** | Cálculo de totales de venta |
-
-### Circuito Lógico de Alertas
-
-```
-                    ┌─────┐
-N1 ────────────────│ INV │
-                    └──┬──┘
-                       │    ┌─────┐
-                       └────│     │
-                            │ AND │── Alerta Amarilla (¬N1 · N0)
-N0 ────────────────────────│     │
-                            └─────┘
-
-                    ┌─────┐
-N1 ────────────────│ INV │
-                    └──┬──┘
-                       │    ┌─────┐
-                       └────│     │
-                            │ AND │── Alerta Roja (¬N1 · ¬N0)
-                    ┌─────┐│     │
-N0 ────────────────│ INV │└─────┘
-                    └─────┘
-```
-
-### Mapa de Karnaugh para Alertas
-
-```
-         N0
-       0     1
-    ┌─────┬─────┐
-  0 │  R  │  A  │   R = Alerta Roja (crítico)
-    │     │     │   A = Alerta Amarilla (bajo)
-N1 ├─────┼─────┤   - = Sin alerta
-  1 │  -  │  -  │
-    └─────┴─────┘
-
-Expresiones minimizadas:
-  Alerta_Roja     = ¬N1 · ¬N0  (celda 00)
-  Alerta_Amarilla = ¬N1 · N0   (celda 01)
-```
-
-### Decodificador de Combustible (3:2)
-
-```
-Entrada (2 bits) → Salida (tipo de combustible)
-   00 → Gasolina Regular
-   01 → Gasolina Premium
-   10 → Diésel
-```
 
 ---
 

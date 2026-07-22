@@ -18,6 +18,18 @@
 
 ---
 
+## 🚀 Enlaces Rápidos
+
+<div align="center">
+
+[![Prototipo v0.dev](https://img.shields.io/badge/🎨_Prototipo_en_v0.dev-7C3AED?style=for-the-badge&logo=vercel&logoColor=white&labelColor=6D28D9)](https://v0.app/chat/el-surtidor-cochabambino-p8KmLOhBFVb)
+&nbsp;&nbsp;
+[![App en Producción](https://img.shields.io/badge/🌐_App_en_Producción-000000?style=for-the-badge&logo=vercel&logoColor=white&labelColor=1a1a1a)](https://vercel.com/ "Próximamente — Reemplaza este link cuando despliegues")
+
+</div>
+
+---
+
 ## 📋 Tabla de Contenidos
 
 - [Descripción del Proyecto](#-descripción-del-proyecto)
@@ -264,7 +276,14 @@ La aplicación está preparada para desplegarse en:
 - **Frontend:** [Vercel](https://vercel.com) (plataforma recomendada para Next.js)
 - **Backend/Database:** [Supabase](https://supabase.com) (hosteado)
 
-> 🔗 **Link del proyecto deployeado:** *Próximamente*
+> 🔗 **Link del proyecto deployeado:** *Próximamente* <!-- Reemplaza con la URL de Vercel cuando lo despliegues -->
+
+### 🔗 Enlaces Rápidos
+
+| Recurso | Link |
+|---------|------|
+| 🎨 Prototipo en v0.dev | [Abrir prototipo](https://v0.app/chat/el-surtidor-cochabambino-p8KmLOhBFVb) |
+| 🌐 App en producción | *Próximamente* |
 
 ---
 

@@ -53,8 +53,8 @@ export function UsuarioDetail({ profile, roles, userRoles }: Props) {
     startTransition(async () => {
       try {
         await updateUsuarioRoles(profile.id, selectedRoles)
-        router.refresh()
         toast.success('Roles actualizados correctamente')
+        router.refresh()
       } catch {
         toast.error('Error al actualizar los roles')
       }

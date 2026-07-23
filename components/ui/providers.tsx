@@ -1,7 +1,6 @@
 'use client'
 
 import { ThemeProvider } from 'next-themes'
-import { SidebarProvider } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -12,7 +11,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       enableSystem
       disableTransitionOnChange
     >
-      <SidebarProvider>{children}</SidebarProvider>
+      {children}
       <Toaster position="top-right" richColors closeButton />
     </ThemeProvider>
   )

@@ -32,7 +32,7 @@ VALUES (
   '{"sub":"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11","email":"admin@surtidor.com","email_verified":true,"phone_verified":false}'::jsonb,
   now(),
   now(),
-  '', '', '', NULL,
+  '70123456', '', '', NULL,
   '', '', NULL
 )
 ON CONFLICT (id) DO NOTHING;

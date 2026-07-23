@@ -31,7 +31,7 @@ VALUES (
   '{"sub":"b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a12","email":"supervisor@surtidor.com","email_verified":true,"phone_verified":false}'::jsonb,
   now(),
   now(),
-  '', '', '', NULL,
+  '71234567', '', '', NULL,
   '', '', NULL
 )
 ON CONFLICT (id) DO NOTHING;
@@ -95,7 +95,7 @@ VALUES (
   '{"sub":"c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a13","email":"operador@surtidor.com","email_verified":true,"phone_verified":false}'::jsonb,
   now(),
   now(),
-  '', '', '', NULL,
+  '72345678', '', '', NULL,
   '', '', NULL
 )
 ON CONFLICT (id) DO NOTHING;
@@ -159,7 +159,7 @@ VALUES (
   '{"sub":"d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a14","email":"auditor@surtidor.com","email_verified":true,"phone_verified":false}'::jsonb,
   now(),
   now(),
-  '', '', '', NULL,
+  '73456789', '', '', NULL,
   '', '', NULL
 )
 ON CONFLICT (id) DO NOTHING;

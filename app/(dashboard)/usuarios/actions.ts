@@ -89,14 +89,14 @@ export async function getRoles(): Promise<Rol[]> {
 export async function updateUsuarioRoles(id: string, roles: string[]) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) throw new Error('No autenticado')
 
   // Verificar que el usuario actual es admin
   const { data: isAdmin } = await supabase
     .rpc('verificar_rol', { rol_requerido: 'admin' })
 
   if (!isAdmin) {
-    redirect(`/usuarios/${id}?error=${encodeURIComponent('Solo los administradores pueden cambiar roles')}`)
+    throw new Error('Solo los administradores pueden cambiar roles')
   }
 
   // Eliminar roles existentes
@@ -106,7 +106,7 @@ export async function updateUsuarioRoles(id: string, roles: string[]) {
     .eq('usuario_id', id)
 
   if (deleteError) {
-    redirect(`/usuarios/${id}?error=${encodeURIComponent('Error al eliminar roles: ' + deleteError.message)}`)
+    throw new Error('Error al eliminar roles: ' + deleteError.message)
   }
 
   // Insertar nuevos roles
@@ -116,7 +116,7 @@ export async function updateUsuarioRoles(id: string, roles: string[]) {
     )
 
     if (insertError) {
-      redirect(`/usuarios/${id}?error=${encodeURIComponent('Error al asignar roles: ' + insertError.message)}`)
+      throw new Error('Error al asignar roles: ' + insertError.message)
     }
   }
 

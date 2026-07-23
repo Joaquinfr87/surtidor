@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { LogIn } from 'lucide-react'
+import { DemoCredentials } from '@/components/demo-credentials'
 
 export function LoginForm() {
   const [isPending, startTransition] = useTransition()
@@ -134,10 +135,7 @@ export function LoginForm() {
             Regístrate
           </button>
         </div>
-        <div className="mt-4 rounded-md bg-muted/50 p-3 text-center text-xs text-muted-foreground">
-          <p className="font-medium">Credenciales de prueba (admin):</p>
-          <p>admin@surtidor.com / admin123</p>
-        </div>
+        <DemoCredentials />
       </CardContent>
     </Card>
   )

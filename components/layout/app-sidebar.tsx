@@ -8,8 +8,14 @@ import {
   AlertTriangle,
   BarChart3,
   LogOut,
+  Factory,
+  DollarSign,
+  Truck,
+  Clock,
+  Users,
 } from 'lucide-react'
 
+import { Logo } from '@/components/ui/logo'
 import { signOut } from '@/app/(auth)/logout/actions'
 import {
   Sidebar,
@@ -37,8 +43,13 @@ const navItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
   { title: 'Surtidores', url: '/surtidores', icon: Fuel },
   { title: 'Ventas', url: '/ventas', icon: Receipt },
+  { title: 'Turnos', url: '/turnos', icon: Clock },
   { title: 'Alertas', url: '/alertas', icon: AlertTriangle },
+  { title: 'Precios', url: '/precios', icon: DollarSign },
+  { title: 'Abastecimientos', url: '/abastecimientos', icon: Truck },
+  { title: 'Proveedores', url: '/proveedores', icon: Factory },
   { title: 'Reportes', url: '/reportes', icon: BarChart3 },
+  { title: 'Usuarios', url: '/usuarios', icon: Users },
 ]
 
 interface AppSidebarProps {
@@ -61,22 +72,12 @@ export function AppSidebar({ user }: AppSidebarProps) {
     .slice(0, 2)
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Fuel className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  El Surtidor
-                </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  Cochabambino
-                </span>
-              </div>
+            <SidebarMenuButton size="lg" className="group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!justify-center">
+              <Logo size="md" showText />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -90,8 +91,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    isActive={pathname === item.url}
+                    isActive={pathname === item.url || (item.url !== '/' && pathname.startsWith(item.url))}
                     onClick={() => router.push(item.url)}
+                    tooltip={item.title}
                   >
                     <item.icon />
                     <span>{item.title}</span>
@@ -109,9 +111,9 @@ export function AppSidebar({ user }: AppSidebarProps) {
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <SidebarMenuButton size="lg">
+                  <SidebarMenuButton size="lg" className="group-data-[collapsible=icon]:!p-0 group-data-[collapsible=icon]:!justify-center">
                     <Avatar className="size-8">
-                      <AvatarFallback>{initials}</AvatarFallback>
+                      <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
@@ -129,7 +131,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 align="start"
                 className="w-56"
               >
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 size-4" />
                   Cerrar Sesión
                 </DropdownMenuItem>

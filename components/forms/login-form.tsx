@@ -25,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { LogIn } from 'lucide-react'
 
 export function LoginForm() {
   const [isPending, startTransition] = useTransition()
@@ -109,8 +110,18 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? 'Ingresando...' : 'Ingresar'}
+            <Button type="submit" className="w-full transition-all duration-200" disabled={isPending}>
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Ingresando...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <LogIn className="size-4" />
+                  Ingresar
+                </span>
+              )}
             </Button>
           </form>
         </Form>
@@ -122,6 +133,10 @@ export function LoginForm() {
           >
             Regístrate
           </button>
+        </div>
+        <div className="mt-4 rounded-md bg-muted/50 p-3 text-center text-xs text-muted-foreground">
+          <p className="font-medium">Credenciales de prueba (admin):</p>
+          <p>admin@surtidor.com / admin123</p>
         </div>
       </CardContent>
     </Card>

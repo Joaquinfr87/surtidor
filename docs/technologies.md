@@ -1,6 +1,6 @@
 # 🛠️ Guía de Tecnologías
 
-> Documentación detallada de las tecnologías utilizadas en el proyecto **"El Surtidor Cochabambino"**.
+> Documentación detallada de las tecnologías utilizadas en el proyecto **"Surtidor Tunari"**.
 
 ---
 

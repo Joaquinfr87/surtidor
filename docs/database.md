@@ -1058,7 +1058,7 @@ CREATE INDEX idx_turnos_cerrados ON turnos(cerrado) WHERE cerrado = FALSE;
 ```sql
 -- ============================================
 -- SISTEMA DE CONTROL PARA SURTIDOR DE GASOLINA
--- "El Surtidor Cochabambino"
+-- "Surtidor Tunari"
 -- Script completo de base de datos
 -- ============================================
 

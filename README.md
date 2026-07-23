@@ -2,7 +2,7 @@
 
 # ⛽ Sistema de Control y Gestión para Surtidor de Gasolina
 
-### "El Surtidor Cochabambino"
+### "Surtidor Tunari"
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.2.10-black?style=for-the-badge&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.4-61DAFB?style=for-the-badge&logo=react)
@@ -47,7 +47,7 @@
 
 ## 📖 Descripción del Proyecto
 
-**"El Surtidor Cochabambino"** es un sistema digital de control y gestión desarrollado para estaciones de servicio en Cochabamba, Bolivia. La aplicación permite administrar surtidores de gasolina, registrar ventas, monitorear alertas de nivel de combustible y generar reportes operativos.
+**"Surtidor Tunari"** es un sistema digital de control y gestión desarrollado para estaciones de servicio. La aplicación permite administrar surtidores de gasolina, registrar ventas, monitorear alertas de nivel de combustible y generar reportes operativos.
 
 El proyecto está construido con **tecnologías web modernas**, siguiendo **patrones de diseño actuales** y **estándares de calidad de software**.
 
@@ -296,7 +296,7 @@ Este proyecto se desarrolla con fines educativos.
 ---
 
 <div align="center">
-  <p>Desarrollado con ❤️ para "El Surtidor Cochabambino" — Cochabamba, Bolivia</p>
+  <p>Desarrollado con ❤️ para "Surtidor Tunari"</p>
   <p>
     <a href="docs/technologies.md">Tecnologías</a> •
     <a href="docs/database.md">Base de Datos</a> •

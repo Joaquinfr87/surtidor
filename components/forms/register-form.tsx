@@ -25,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { UserPlus } from 'lucide-react'
 
 export function RegisterForm() {
   const [isPending, startTransition] = useTransition()
@@ -128,8 +129,18 @@ export function RegisterForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? 'Creando cuenta...' : 'Crear Cuenta'}
+            <Button type="submit" className="w-full transition-all duration-200" disabled={isPending}>
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Creando cuenta...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <UserPlus className="size-4" />
+                  Crear Cuenta
+                </span>
+              )}
             </Button>
           </form>
         </Form>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { Providers } from "@/components/ui/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +14,33 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "El Surtidor Cochabambino",
+  title: {
+    template: "%s | Surtidor Tunari",
+    default: "Surtidor Tunari",
+  },
   description: "Sistema de control para surtidor de gasolina",
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  manifest: "/manifest.json",
+  openGraph: {
+    title: "Surtidor Tunari",
+    description: "Sistema de control para surtidor de gasolina",
+    type: "website",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "Surtidor Tunari",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -30,7 +55,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
-        <SidebarProvider>{children}</SidebarProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

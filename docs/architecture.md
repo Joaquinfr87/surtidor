@@ -347,7 +347,7 @@ Supabase Realtime                    Frontend
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Header: "El Surtidor Cochabambino"    [User] 🔒│
+│  Header: "Surtidor Tunari"    [User] 🔒│
 ├──────────┬──────────────────────────────────────┤
 │          │  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ │
 │ Sidebar  │  │⛽ 12  │ │💰 1.2k│ │🚨 3  │ │📊 5  │ │

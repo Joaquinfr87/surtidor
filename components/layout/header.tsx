@@ -3,6 +3,7 @@
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { NotificationsBell, type AlertaData } from '@/components/notifications/notifications-bell'
 import { usePathname } from 'next/navigation'
 
 const breadcrumbMap: Record<string, string> = {
@@ -23,7 +24,11 @@ const breadcrumbMap: Record<string, string> = {
   '/reportes': 'Reportes',
 }
 
-export function Header() {
+interface HeaderProps {
+  activeAlerts?: AlertaData[]
+}
+
+export function Header({ activeAlerts = [] }: HeaderProps) {
   const pathname = usePathname()
 
   // Get breadcrumb - for detail/edit pages, show parent section
@@ -47,6 +52,7 @@ export function Header() {
         <span className="font-medium text-foreground/80">{title}</span>
       </div>
       <div className="flex-1" />
+      <NotificationsBell initialAlerts={activeAlerts} />
       <ThemeToggle />
     </header>
   )

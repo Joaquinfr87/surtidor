@@ -191,12 +191,25 @@
   }
 }
 
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 @utility animate-fade-in-up {
   animation: fade-in-up 0.5s ease-out both;
 }
 
 @utility animate-fade-in {
   animation: fade-in 0.3s ease-out both;
+}
+
+@utility animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
 }
 
 @utility animate-scale-in {

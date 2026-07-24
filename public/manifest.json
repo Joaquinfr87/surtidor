@@ -4,8 +4,11 @@
   "description": "Sistema de control para surtidor de gasolina",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#0f172a",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "orientation": "portrait-primary",
+  "lang": "es-BO",
+  "categories": ["business", "utilities"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -15,7 +18,10 @@
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

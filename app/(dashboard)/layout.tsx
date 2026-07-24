@@ -11,13 +11,25 @@ export default async function DashboardLayout({
   const supabase = await createClient()
   const { data } = await supabase.auth.getClaims()
 
+  // Fetch user roles from the user_roles table
+  const userId = data?.claims?.sub
+  let roles: string[] = []
+  if (userId) {
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('rol')
+      .eq('usuario_id', userId)
+    roles = userRoles?.map((ur) => ur.rol) ?? []
+  }
+
   const user = data?.claims
     ? {
         email: data.claims.email ?? '',
         nombre_completo:
           data.claims.user_metadata?.nombre_completo ?? 'Usuario',
+        roles,
       }
-    : { email: '', nombre_completo: 'Usuario' }
+    : { email: '', nombre_completo: 'Usuario', roles: [] }
 
   return (
     <SidebarProvider>

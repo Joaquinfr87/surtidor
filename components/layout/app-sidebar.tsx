@@ -1,5 +1,8 @@
 'use client'
 
+'use client'
+
+import { useMemo } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -13,6 +16,7 @@ import {
   Truck,
   Clock,
   Users,
+  Shield,
 } from 'lucide-react'
 
 import { Logo } from '@/components/ui/logo'
@@ -38,24 +42,34 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
+import { roleLabels, roleColors, getAccessibleSections } from '@/lib/constants/roles'
+import { Badge } from '@/components/ui/badge'
 
-const navItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
-  { title: 'Surtidores', url: '/surtidores', icon: Fuel },
-  { title: 'Ventas', url: '/ventas', icon: Receipt },
-  { title: 'Turnos', url: '/turnos', icon: Clock },
-  { title: 'Alertas', url: '/alertas', icon: AlertTriangle },
-  { title: 'Precios', url: '/precios', icon: DollarSign },
-  { title: 'Abastecimientos', url: '/abastecimientos', icon: Truck },
-  { title: 'Proveedores', url: '/proveedores', icon: Factory },
-  { title: 'Reportes', url: '/reportes', icon: BarChart3 },
-  { title: 'Usuarios', url: '/usuarios', icon: Users },
+interface NavItem {
+  title: string
+  url: string
+  icon: React.ComponentType<{ className?: string }>
+  section: string
+}
+
+const allNavItems: NavItem[] = [
+  { title: 'Dashboard', url: '/', icon: LayoutDashboard, section: 'dashboard' },
+  { title: 'Surtidores', url: '/surtidores', icon: Fuel, section: 'surtidores' },
+  { title: 'Ventas', url: '/ventas', icon: Receipt, section: 'ventas' },
+  { title: 'Turnos', url: '/turnos', icon: Clock, section: 'turnos' },
+  { title: 'Alertas', url: '/alertas', icon: AlertTriangle, section: 'alertas' },
+  { title: 'Precios', url: '/precios', icon: DollarSign, section: 'precios' },
+  { title: 'Abastecimientos', url: '/abastecimientos', icon: Truck, section: 'abastecimientos' },
+  { title: 'Proveedores', url: '/proveedores', icon: Factory, section: 'proveedores' },
+  { title: 'Reportes', url: '/reportes', icon: BarChart3, section: 'reportes' },
+  { title: 'Usuarios', url: '/usuarios', icon: Users, section: 'usuarios' },
 ]
 
 interface AppSidebarProps {
   user: {
     email: string
     nombre_completo: string
+    roles: string[]
   }
 }
 
@@ -63,6 +77,22 @@ export function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { isMobile } = useSidebar()
+
+  // Filter nav items based on user's roles
+  const accessibleSections = useMemo(
+    () => getAccessibleSections(user.roles),
+    [user.roles]
+  )
+
+  const navItems = useMemo(
+    () => allNavItems.filter((item) => accessibleSections.includes(item.section)),
+    [accessibleSections]
+  )
+
+  // Get primary role for display (first role)
+  const primaryRole = user.roles[0] ?? ''
+  const roleLabel = roleLabels[primaryRole] ?? ''
+  const roleBadgeColor = roleColors[primaryRole] ?? ''
 
   const initials = user.nombre_completo
     .split(' ')
@@ -119,9 +149,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
                       <span className="truncate font-semibold">
                         {user.nombre_completo}
                       </span>
-                      <span className="truncate text-xs text-muted-foreground">
-                        {user.email}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <Shield className="size-3 text-muted-foreground" />
+                        {roleLabel && (
+                          <Badge
+                            variant="secondary"
+                            className={`px-1.5 py-0 text-[10px] font-medium leading-none ${roleBadgeColor}`}
+                          >
+                            {roleLabel}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </SidebarMenuButton>
                 }

@@ -1,0 +1,24 @@
+'use client'
+
+import { useEffect } from 'react'
+
+export function SWRegister() {
+  useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      window.location.hostname !== 'localhost'
+    ) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          console.log('SW registered:', reg.scope)
+        })
+        .catch((err) => {
+          console.error('SW registration failed:', err)
+        })
+    }
+  }, [])
+
+  return null
+}

@@ -24,9 +24,10 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/ui/empty-state'
-import { ArrowUpDown, Search, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { ArrowUpDown, Search, AlertTriangle, CheckCircle2, Volume2 } from 'lucide-react'
 import { resolverAlerta } from '../actions'
 import { cn } from '@/lib/utils'
+import { useSpeech } from '@/hooks/use-speech'
 
 interface Alerta {
   id: number
@@ -46,6 +47,7 @@ interface Props {
 export function AlertasTable({ initialData }: Props) {
   const router = useRouter()
   const [globalFilter, setGlobalFilter] = useState('')
+  const { speak } = useSpeech()
 
   const columns = useMemo<ColumnDef<Alerta>[]>(() => [
     {
@@ -105,37 +107,53 @@ export function AlertasTable({ initialData }: Props) {
     {
       id: 'acciones',
       header: 'Acciones',
-      cell: ({ row }) => (
-        row.original.activa ? (
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={async (e) => {
-            e.stopPropagation()
-            toast.custom((t) => (
-              <div className="rounded-lg border bg-popover p-4 shadow-md">
-                <p className="mb-3 text-sm font-medium">¿Resolver alerta?</p>
-                <p className="mb-3 text-xs text-muted-foreground">La alerta será marcada como resuelta.</p>
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={() => toast.dismiss(t)}>Cancelar</Button>
-                  <Button size="sm" onClick={async () => {
-                    toast.dismiss(t)
-                    try {
-                      await resolverAlerta(row.original.id)
-                      router.refresh()
-                      toast.success('Alerta resuelta correctamente')
-                    } catch {
-                      toast.error('Error al resolver la alerta')
-                    }
-                  }}>Resolver</Button>
-                </div>
-              </div>
-            ), { duration: 10000 })
-          }}>
-            <CheckCircle2 className="mr-1 size-3" />
-            Resolver
-          </Button>
-        ) : null
-      ),
+      cell: ({ row }) => {
+        const alerta = row.original
+        const textoAlerta = `Alerta ${alerta.tipo === 'critico' ? 'crítica' : 'baja'} en surtidor número ${alerta.surtidores?.numero ?? 'desconocido'}. Combustible: ${alerta.surtidores?.tipos_combustible?.nombre ?? 'no especificado'}. Nivel: ${alerta.nivel}.`
+
+        return (
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => speak(textoAlerta)}
+              title="Escuchar alerta"
+            >
+              <Volume2 className="size-3" />
+            </Button>
+            {alerta.activa && (
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={async (e) => {
+                e.stopPropagation()
+                toast.custom((t) => (
+                  <div className="rounded-lg border bg-popover p-4 shadow-md">
+                    <p className="mb-3 text-sm font-medium">¿Resolver alerta?</p>
+                    <p className="mb-3 text-xs text-muted-foreground">La alerta será marcada como resuelta.</p>
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => toast.dismiss(t)}>Cancelar</Button>
+                      <Button size="sm" onClick={async () => {
+                        toast.dismiss(t)
+                        try {
+                          await resolverAlerta(alerta.id)
+                          router.refresh()
+                          toast.success('Alerta resuelta correctamente')
+                        } catch {
+                          toast.error('Error al resolver la alerta')
+                        }
+                      }}>Resolver</Button>
+                    </div>
+                  </div>
+                ), { duration: 10000 })
+              }}>
+                <CheckCircle2 className="mr-1 size-3" />
+                Resolver
+              </Button>
+            )}
+          </div>
+        )
+      },
     },
-  ], [router])
+  ], [router, speak])
 
   const table = useReactTable({
     data: initialData,

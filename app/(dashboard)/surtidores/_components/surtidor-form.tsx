@@ -1,6 +1,7 @@
 'use client'
 
 import { useTransition, useState } from 'react'
+import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -9,6 +10,9 @@ import {
   type CreateSurtidorInput,
 } from '@/lib/schemas/surtidor'
 import { createSurtidor, updateSurtidor } from '../actions'
+
+const surtidorFormSchema = createSurtidorSchema.omit({ numero: true })
+type SurtidorFormInput = z.infer<typeof surtidorFormSchema>
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,19 +57,17 @@ export function SurtidorForm({ mode, initialData, id, tiposCombustible }: Props)
     error ? decodeURIComponent(error) : null
   )
 
-  const form = useForm<CreateSurtidorInput>({
-    resolver: zodResolver(createSurtidorSchema as any) as any,
+  const form = useForm<SurtidorFormInput>({
+    resolver: zodResolver(surtidorFormSchema as any) as any,
     defaultValues: {
-      numero: initialData?.numero ?? undefined,
       tipo_combustible_id: initialData?.tipo_combustible_id ?? '',
       capacidad: initialData?.capacidad ?? undefined,
       activo: initialData?.activo ?? true,
     },
   })
 
-  function onSubmit(data: CreateSurtidorInput) {
+  function onSubmit(data: SurtidorFormInput) {
     const formData = new FormData()
-    formData.append('numero', String(data.numero))
     formData.append('tipo_combustible_id', data.tipo_combustible_id)
     formData.append('capacidad', String(data.capacidad))
     formData.append('activo', String(data.activo))
@@ -101,26 +103,6 @@ export function SurtidorForm({ mode, initialData, id, tiposCombustible }: Props)
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="numero"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Número de Surtidor</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="Ej: 1"
-                      disabled={isPending}
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="tipo_combustible_id"

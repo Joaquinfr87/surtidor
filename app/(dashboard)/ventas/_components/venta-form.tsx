@@ -98,7 +98,7 @@ export function VentaForm({ surtidores, tiposCombustible }: Props) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Combustible</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isPending}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un combustible" />
@@ -124,7 +124,7 @@ export function VentaForm({ surtidores, tiposCombustible }: Props) {
                 <FormItem>
                   <FormLabel>Litros</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.01" placeholder="0" disabled={isPending} {...field} onChange={(e) => field.onChange(e.target.valueAsNumber)} />
+                    <Input type="number" step="0.01" placeholder="0" disabled={isPending} value={field.value ?? ''} onChange={(e) => field.onChange(e.target.valueAsNumber)} onBlur={field.onBlur} ref={field.ref} name={field.name} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

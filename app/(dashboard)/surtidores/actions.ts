@@ -13,8 +13,18 @@ export async function createSurtidor(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
+  // Auto-generate next numero
+  const { data: maxSurtidor } = await supabase
+    .from('surtidores')
+    .select('numero')
+    .order('numero', { ascending: false })
+    .limit(1)
+    .single()
+
+  const nextNumero = (maxSurtidor?.numero ?? 0) + 1
+
   const rawData = {
-    numero: formData.get('numero'),
+    numero: nextNumero,
     tipo_combustible_id: formData.get('tipo_combustible_id'),
     capacidad: formData.get('capacidad'),
     activo: formData.get('activo') === 'true',
@@ -55,7 +65,6 @@ export async function updateSurtidor(id: number, formData: FormData) {
   const supabase = await createClient()
 
   const rawData = {
-    numero: formData.get('numero'),
     tipo_combustible_id: formData.get('tipo_combustible_id'),
     capacidad: formData.get('capacidad'),
     activo: formData.get('activo') === 'true',
